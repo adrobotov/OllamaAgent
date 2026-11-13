@@ -1,0 +1,12 @@
+## Bin/Obj folders
+bin/
+obj/
+
+## IDE
+.vs/
+*.suo
+*.user
+
+## OS
+.DS_Store
+Thumbs.db
