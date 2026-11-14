@@ -276,9 +276,12 @@ public partial class ChatViewModel : ObservableObject
                     {
                         var result = await _toolExecutor.ExecuteAsync(toolCall);
                         
+                        // Translate tool name to Russian
+                        var toolNameRu = TranslateToolName(toolCall.Function.Name);
+                        
                         // Display tool call result
                         var status = result.IsError ? "❌" : "✅";
-                        var toolMessage = $"\n\n*{status} Инструмент: `{toolCall.Function.Name}`*\n\n`{result.Content}`";
+                        var toolMessage = $"\n\n*{status} Инструмент: `{toolNameRu}`*\n\n`{result.Content}`";
                         ChatMessages.Add(new ChatMessageViewModel(toolMessage, ChatMessageViewModel.MessageType.ToolResult));
 
                         // Add tool result to messages
@@ -318,6 +321,34 @@ public partial class ChatViewModel : ObservableObject
         {
             IsProcessing = false;
         }
+    }
+
+    /// <summary>
+    /// Translate tool name to Russian
+    /// </summary>
+    private static string TranslateToolName(string name)
+    {
+        return name.ToLower() switch
+        {
+            "read_file" => "Чтение файла",
+            "write_file" => "Запись файла",
+            "list_directory" => "Список директории",
+            "create_directory" => "Создание директории",
+            "search_files" => "Поиск файлов",
+            "get_process_list" => "Список процессов",
+            "kill_process" => "Завершение процесса",
+            "run_command" => "Выполнение команды",
+            "git_status" => "Статус Git",
+            "git_diff" => "Изменения Git",
+            "git_log" => "История Git",
+            "git_branch" => "Ветки Git",
+            "git_add" => "Добавление в Git",
+            "git_commit" => "Коммит Git",
+            "get_weather" => "Погода",
+            "web_search" => "Поиск в интернете",
+            "web_fetch" => "Загрузка страницы",
+            _ => name
+        };
     }
 
     /// <summary>

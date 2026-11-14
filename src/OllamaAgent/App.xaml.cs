@@ -38,6 +38,9 @@ public partial class App : Application
             {
                 DataContext = viewModel
             };
+
+            // Load models asynchronously on startup
+            _ = viewModel.LoadModelsAsync();
         }
 
         base.OnFrameworkInitializationCompleted();

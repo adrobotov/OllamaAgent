@@ -61,7 +61,9 @@
                                   ItemsSource="{Binding ModelOptions}" 
                                   SelectedItem="{Binding SelectedModelDisplay}"
                                   Height="30"
-                                  Margin="10,0" />
+                                  Margin="10,0"
+                                  HorizontalAlignment="Right"
+                                  Width="250" />
                     </Grid>
 
                     <!-- Weather API Key -->
