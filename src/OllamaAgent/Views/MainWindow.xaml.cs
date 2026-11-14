@@ -353,6 +353,37 @@ public partial class MainWindow : Window
         this.Hide();
     }
 
+    private void MainWindow_KeyDown(object? sender, KeyEventArgs e)
+    {
+        var viewModel = DataContext as ChatViewModel;
+        if (viewModel == null) return;
+
+        // Ctrl+N — new chat
+        if (e.Key == Key.N && e.KeyModifiers == KeyModifiers.Control)
+        {
+            viewModel.NewChatCommand.Execute(null);
+            e.Handled = true;
+        }
+        // Ctrl+D — delete chat
+        else if (e.Key == Key.D && e.KeyModifiers == KeyModifiers.Control)
+        {
+            DeleteChat_Click(null, null);
+            e.Handled = true;
+        }
+        // Ctrl+S — save config
+        else if (e.Key == Key.S && e.KeyModifiers == KeyModifiers.Control)
+        {
+            SaveConfig_Click(null, null);
+            e.Handled = true;
+        }
+        // Ctrl+Shift+S — export JSON
+        else if (e.Key == Key.S && e.KeyModifiers == (KeyModifiers.Control | KeyModifiers.Shift))
+        {
+            ExportJson_Click(null, null);
+            e.Handled = true;
+        }
+    }
+
     private async void ExportJson_Click(object? sender, RoutedEventArgs e)
     {
         var viewModel = DataContext as ChatViewModel;

@@ -9,7 +9,8 @@
         x:Class="OllamaAgent.Views.MainWindow"
         Title="ИИ Чат — Ollama"
         Width="1200" Height="800"
-        MinWidth="800" MinHeight="600">
+        MinWidth="800" MinHeight="600"
+        KeyDown="MainWindow_KeyDown">
 
     <Design.DataContext>
         <vm:ChatViewModel />
