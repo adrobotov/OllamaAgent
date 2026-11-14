@@ -88,6 +88,31 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host ""
 
+# Publish for installer (Release mode)
+if ($Configuration -eq "Release") {
+    Write-Log "Publishing application for installer..."
+    dotnet publish src/OllamaAgent/OllamaAgent.csproj -c Release -o publish
+    
+    if (Test-Path "installer\makensis.exe") {
+        Write-Log "Creating installer with NSIS..."
+        & "installer\makensis.exe" setup.nsi
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Success "Installer created: OllamaAgent_Setup.exe"
+        }
+        else {
+            Write-Warn "NSIS installer creation failed. Make sure makensis.exe is available."
+        }
+    }
+    else {
+        Write-Warn "NSIS not found. Install NSIS and place makensis.exe in installer/ folder."
+        Write-Log "To create installer manually:"
+        Write-Log "  1. Install NSIS from https://nsis.sourceforge.io/Download"
+        Write-Log "  2. Run: makensis.exe installer\setup.nsi"
+    }
+    Write-Host ""
+}
+
 # Summary
 Write-Log "========================================" -ForegroundColor $ColorCyan
 Write-Success "Build completed successfully!"
