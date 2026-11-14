@@ -120,6 +120,17 @@ public partial class ChatViewModel : ObservableObject
     /// </summary>
     private List<string> _attachedImages { get; } = new();
 
+    /// <summary>
+    /// Pending tool confirmations
+    /// </summary>
+    public ObservableCollection<ToolConfirmation> PendingConfirmations { get; } = new();
+
+    /// <summary>
+    /// Whether there are pending tool confirmations
+    /// </summary>
+    [ObservableProperty]
+    private bool _hasPendingConfirmations;
+
     private string SessionsDir => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "sessions");
 
     /// <summary>
@@ -387,7 +398,7 @@ public partial class ChatViewModel : ObservableObject
                 // If there are tool calls, execute them and continue
                 if (toolCalls.Count > 0)
                 {
-                    StatusText = "Выполняю инструменты...";
+                    StatusText = "Проверяю инструменты...";
 
                     // Add assistant message with tool calls to history
                     messages.Add(new Message
@@ -405,10 +416,41 @@ public partial class ChatViewModel : ObservableObject
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         
-                        var result = await _toolExecutor.ExecuteAsync(toolCall);
-                        
                         // Translate tool name to Russian
                         var toolNameRu = TranslateToolName(toolCall.Function.Name);
+                        
+                        // Show confirmation request for sensitive operations
+                        var needsConfirmation = IsSensitiveTool(toolCall.Function.Name);
+                        if (needsConfirmation)
+                        {
+                            var confirmation = new ToolConfirmation
+                            {
+                                ToolName = toolCall.Function.Name,
+                                ToolNameRu = toolNameRu,
+                                Arguments = System.Text.Json.JsonSerializer.Serialize(toolCall.Function.Arguments)
+                            };
+                            AddToolConfirmation(confirmation);
+                            
+                            // Wait for user confirmation
+                            while (confirmation.IsPending)
+                            {
+                                await Task.Delay(500, cancellationToken);
+                            }
+                            
+                            if (confirmation.IsRejected)
+                            {
+                                toolResults.Add($"*❌ Инструмент отклонён пользователем: `{toolNameRu}`*");
+                                messages.Add(new Message
+                                {
+                                    Role = "tool",
+                                    Content = "Отклонено пользователем",
+                                    ToolName = toolCall.Function.Name
+                                });
+                                continue;
+                            }
+                        }
+                        
+                        var result = await _toolExecutor.ExecuteAsync(toolCall);
                         
                         // Add to results collection
                         var status = result.IsError ? "❌" : "✅";
@@ -526,6 +568,22 @@ public partial class ChatViewModel : ObservableObject
         
         // Default: assume no tool support for unknown models
         return false;
+    }
+
+    /// <summary>
+    /// Check if a tool requires user confirmation before execution
+    /// </summary>
+    private static bool IsSensitiveTool(string toolName)
+    {
+        return toolName.ToLower() switch
+        {
+            "run_command" => true,
+            "write_file" => true,
+            "delete_file" => true,
+            "create_directory" => true,
+            "kill_process" => true,
+            _ => false
+        };
     }
 
     /// <summary>
@@ -911,6 +969,24 @@ public partial class ChatViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Remove a tool confirmation from pending list
+    /// </summary>
+    public void RemoveFromPendingConfirmations(ToolConfirmation confirmation)
+    {
+        PendingConfirmations.Remove(confirmation);
+        HasPendingConfirmations = PendingConfirmations.Count > 0;
+    }
+
+    /// <summary>
+    /// Add a tool confirmation request
+    /// </summary>
+    public void AddToolConfirmation(ToolConfirmation confirmation)
+    {
+        PendingConfirmations.Add(confirmation);
+        HasPendingConfirmations = true;
+    }
+
+    /// <summary>
     /// Toggle theme
     /// </summary>
     [RelayCommand]
@@ -966,4 +1042,17 @@ public class ImagePreviewInfo
 {
     public string Name { get; set; } = string.Empty;
     public long Size { get; set; }
+}
+
+/// <summary>
+/// Tool confirmation request
+/// </summary>
+public class ToolConfirmation
+{
+    public string ToolName { get; set; } = string.Empty;
+    public string ToolNameRu { get; set; } = string.Empty;
+    public string Arguments { get; set; } = string.Empty;
+    public bool IsApproved { get; set; }
+    public bool IsRejected { get; set; }
+    public bool IsPending => !IsApproved && !IsRejected;
 }

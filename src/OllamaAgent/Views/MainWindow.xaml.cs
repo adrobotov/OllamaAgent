@@ -297,4 +297,24 @@ public partial class MainWindow : Window
             viewModel?.RemoveImage(preview);
         }
     }
+
+    private void ApproveTool_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.DataContext is ToolConfirmation confirmation)
+        {
+            confirmation.IsApproved = true;
+            var viewModel = DataContext as ChatViewModel;
+            viewModel?.RemoveFromPendingConfirmations(confirmation);
+        }
+    }
+
+    private void RejectTool_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.DataContext is ToolConfirmation confirmation)
+        {
+            confirmation.IsRejected = true;
+            var viewModel = DataContext as ChatViewModel;
+            viewModel?.RemoveFromPendingConfirmations(confirmation);
+        }
+    }
 }
