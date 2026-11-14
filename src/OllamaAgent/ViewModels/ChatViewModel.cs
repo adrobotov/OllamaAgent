@@ -364,11 +364,16 @@ public partial class ChatViewModel : ObservableObject
                     Stream = true
                 };
 
-                // Add thinking mode if enabled
-                if (_config.ThinkingEnabled)
+                // Add thinking mode if enabled AND supported by model
+                if (_config.ThinkingEnabled && ModelSupportsThinking(_config.Model))
                 {
                     request.Think = _config.ThinkingDepth;
                     Console.WriteLine($"🧠 Thinking mode enabled with depth: {_config.ThinkingDepth}");
+                }
+                else if (_config.ThinkingEnabled && !ModelSupportsThinking(_config.Model))
+                {
+                    Console.WriteLine($"⚠️ Thinking not supported by model: {_config.Model}");
+                    StatusText = "⚠️ Thinking не поддерживается этой моделью";
                 }
 
                 if (useTools)
@@ -379,13 +384,7 @@ public partial class ChatViewModel : ObservableObject
                 }
                 else
                 {
-                    Console.WriteLine($"📝 No tools (hasTools={hasTools}, supported={ModelSupportsTools(_config.Model)})");
-                    
-                    // Show warning if model claims to support tools but might not
-                    if (hasTools && ModelSupportsTools(_config.Model))
-                    {
-                        StatusText = "⚠️ Модель может не поддерживать инструменты";
-                    }
+                    Console.WriteLine($"📝 No tools (hasTools={hasTools}, supported={ModelSupportsTools(_config.Model)}, model={_config.Model})");
                 }
 
                 // Stream the response
@@ -566,9 +565,9 @@ public partial class ChatViewModel : ObservableObject
             if (nameLower.Contains(name)) return false;
         }
         
-        // Models known to support tools
-        var toolSupportingFamilies = new[] { "llama", "gemma", "qwen", "mistral", "mixtral", "codellama", "codegemma" };
-        var toolSupportingNames = new[] { "llama3.1", "llama3.2", "gemma2", "gemma3", "qwen2.5", "qwen3", "mistral-large", "mixtral" };
+        // Models known to support tools (specific versions only)
+        var toolSupportingFamilies = new[] { "llama", "gemma", "mistral", "mixtral" };
+        var toolSupportingNames = new[] { "llama3.1", "llama3.2", "gemma2", "gemma3", "mistral-large" };
         
         foreach (var family in toolSupportingFamilies)
         {
@@ -581,13 +580,32 @@ public partial class ChatViewModel : ObservableObject
         }
         
         // Models known NOT to support tools
-        var noToolNames = new[] { "saiga", "falcon", "stable-code", "tinyllama" };
+        var noToolNames = new[] { "saiga", "falcon", "stable-code", "tinyllama", "deepseek", "codellama", "codegemma", "qwen" };
         foreach (var name in noToolNames)
         {
             if (nameLower.Contains(name)) return false;
         }
         
         // Default: assume no tool support for unknown models
+        return false;
+    }
+
+    /// <summary>
+    /// Check if a model supports thinking/reasoning mode
+    /// </summary>
+    private static bool ModelSupportsThinking(string modelName)
+    {
+        if (string.IsNullOrEmpty(modelName)) return false;
+        
+        var nameLower = modelName.ToLower();
+        
+        // Only specific models support thinking
+        var thinkingModels = new[] { "deepseek-r1", "qwq", "qwq-32b" };
+        foreach (var name in thinkingModels)
+        {
+            if (nameLower.Contains(name)) return true;
+        }
+        
         return false;
     }
 
