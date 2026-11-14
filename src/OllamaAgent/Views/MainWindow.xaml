@@ -38,24 +38,26 @@
                 
                 <!-- Session List -->
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding ChatSessions}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="models:ChatSession">
-                                <Border Padding="10,5" 
-                                        Background="{Binding IsSelected, Converter={StaticResource SessionSelectedConverter}}"
-                                        PointerPressed="SessionItem_Click">
-                                    <StackPanel Spacing="2">
-                                        <TextBlock Text="{Binding Name}" 
-                                                   TextTrimming="CharacterEllipsis"
-                                                   FontSize="13" />
-                                         <TextBlock Text="{Binding UpdatedAt, StringFormat={}{0:dd.MM HH:mm}}'" 
-                                                   FontSize="10"
-                                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <StackPanel>
+                        <ItemsControl ItemsSource="{Binding ChatSessions}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="models:ChatSession">
+                                    <Border Padding="10,5" 
+                                            Background="{Binding IsSelected, Converter={StaticResource SessionSelectedConverter}}"
+                                            PointerPressed="SessionItem_Click">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="{Binding Name}" 
+                                                       TextTrimming="CharacterEllipsis"
+                                                       FontSize="13" />
+                                            <TextBlock Text="{Binding UpdatedAt, StringFormat={}{0:dd.MM HH:mm}}" 
+                                                       FontSize="10"
+                                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
                 </ScrollViewer>
                 
                 <!-- Sidebar Footer -->
