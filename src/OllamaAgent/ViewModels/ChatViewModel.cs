@@ -178,12 +178,26 @@ public partial class ChatViewModel : ObservableObject
 
     partial void OnSelectedModelDisplayChanged(string value)
     {
-        // Find matching model and update config
-        var model = AvailableModels.FirstOrDefault(m => m.DisplayName == value);
-        if (model != null)
+        try
         {
-            _config.Model = model.Name;
-            Console.WriteLine($"🔄 Model changed to: {model.Name}");
+            // Find matching model and update config
+            var model = AvailableModels.FirstOrDefault(m => m.DisplayName == value);
+            if (model != null)
+            {
+                _config.Model = model.Name;
+                Console.WriteLine($"🔄 Model changed to: {model.Name}");
+            }
+            else if (!string.IsNullOrEmpty(value))
+            {
+                // If no match found, use the display name as model name
+                _config.Model = value;
+                Console.WriteLine($"⚠️ Model display name not found in list, using: {value}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error changing model: {ex.Message}");
+            StatusText = $"❌ Ошибка смены модели: {ex.Message}";
         }
     }
 
