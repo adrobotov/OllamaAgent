@@ -33,7 +33,7 @@ public class MarkdownTextBlock : Panel
         // Clear existing children
         Children.Clear();
         
-        var stackPanel = new StackPanel { Spacing = 0 };
+        var stackPanel = new StackPanel { Spacing = 2 };
         
         foreach (var segment in segments.Where(s => !string.IsNullOrEmpty(s.Text)))
         {
