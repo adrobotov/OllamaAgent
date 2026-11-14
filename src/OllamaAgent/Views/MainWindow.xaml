@@ -72,7 +72,7 @@
         </Border>
 
         <!-- Main Content -->
-        <Grid Grid.Column="1" RowDefinitions="Auto, Auto, Auto, *, Auto, Auto, Auto">
+        <Grid Grid.Column="1" RowDefinitions="Auto, Auto, *, Auto, Auto, Auto">
         <!-- Title Bar -->
         <Border Grid.Row="0" Background="{DynamicResource SystemAccentColor}" Padding="10">
             <StackPanel Orientation="Horizontal" Spacing="10">
@@ -178,9 +178,9 @@
         </Border>
 
         <!-- Chat Area -->
-        <Grid Grid.Row="2" RowDefinitions="*, Auto">
-            <ScrollViewer x:Name="ChatScrollViewer" VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled">
+        <ScrollViewer Grid.Row="2" x:Name="ChatScrollViewer" VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="0">
                 <ItemsControl ItemsSource="{Binding ChatMessages}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="vm:ChatMessageViewModel">
@@ -192,7 +192,7 @@
                                         <TextBlock Grid.Column="0" Text="{Binding Sender}" 
                                                    FontWeight="Bold"
                                                    Foreground="{Binding SenderColor}" />
-                                        
+                                    
                                         <!-- Collapse/Expand button for tool results -->
                                         <Button Grid.Column="2" 
                                                 Content="{Binding IsCollapsed, Converter={StaticResource CollapseToggleConverter}}"
@@ -226,20 +226,18 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
-        </ScrollViewer>
 
-            <!-- Typing Indicator -->
-            <Border Grid.Row="2" 
-                    Background="Transparent"
-                    IsVisible="{Binding ShowTypingIndicator}"
-                    Padding="10">
-                <StackPanel Orientation="Horizontal" Spacing="5">
-                    <TextBlock Text="Ассистор печатает..." 
-                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                               FontSize="12" />
-                </StackPanel>
-            </Border>
-        </Grid>
+                <!-- Typing Indicator -->
+                <Border IsVisible="{Binding ShowTypingIndicator}"
+                        Padding="10">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                        <TextBlock Text="Ассистор печатает..." 
+                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                   FontSize="12" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
 
         <!-- Tool Confirmation Panel (at bottom of chat) -->
         <Border Grid.Row="3" 

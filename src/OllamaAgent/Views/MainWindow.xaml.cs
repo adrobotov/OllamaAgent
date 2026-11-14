@@ -309,6 +309,7 @@ public partial class MainWindow : Window
         if (sender is Button btn && btn.DataContext is ToolConfirmation confirmation)
         {
             confirmation.IsApproved = true;
+            confirmation.CompletionSource.TrySetResult(true);
             var viewModel = DataContext as ChatViewModel;
             viewModel?.RemoveFromPendingConfirmations(confirmation);
         }
@@ -319,6 +320,7 @@ public partial class MainWindow : Window
         if (sender is Button btn && btn.DataContext is ToolConfirmation confirmation)
         {
             confirmation.IsRejected = true;
+            confirmation.CompletionSource.TrySetResult(false);
             var viewModel = DataContext as ChatViewModel;
             viewModel?.RemoveFromPendingConfirmations(confirmation);
         }

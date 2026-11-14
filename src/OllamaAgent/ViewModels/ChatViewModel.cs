@@ -431,11 +431,19 @@ public partial class ChatViewModel : ObservableObject
                             };
                             AddToolConfirmation(confirmation);
                             
-                            // Wait for user confirmation
-                            while (confirmation.IsPending)
+                            // Wait for user confirmation asynchronously
+                            try
                             {
-                                await Task.Delay(500, cancellationToken);
+                                await confirmation.CompletionSource.Task.WaitAsync(cancellationToken);
                             }
+                            catch
+                            {
+                                // Cancellation or timeout - treat as rejected
+                                confirmation.IsRejected = true;
+                            }
+                            
+                            PendingConfirmations.Remove(confirmation);
+                            HasPendingConfirmations = PendingConfirmations.Count > 0;
                             
                             if (confirmation.IsRejected)
                             {
@@ -1055,4 +1063,6 @@ public class ToolConfirmation
     public bool IsApproved { get; set; }
     public bool IsRejected { get; set; }
     public bool IsPending => !IsApproved && !IsRejected;
+    
+    internal TaskCompletionSource<bool> CompletionSource { get; } = new();
 }
