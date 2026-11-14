@@ -71,6 +71,17 @@ public static class MarkdownRenderer
                 segments.Add(new TextSegment { Text = line[2..], IsBold = true, IsItalic = false, IsCode = false });
                 segments.Add(new TextSegment { Text = "\n", IsBold = false, IsItalic = false, IsCode = false });
             }
+            // Handle blockquotes
+            else if (line.StartsWith("> "))
+            {
+                segments.Add(new TextSegment { Text = "  ▎ " + line[2..], IsBold = false, IsItalic = true, IsCode = false });
+                segments.Add(new TextSegment { Text = "\n", IsBold = false, IsItalic = false, IsCode = false });
+            }
+            // Handle horizontal rules
+            else if (line.Trim() == "---" || line.Trim() == "***" || line.Trim() == "___")
+            {
+                segments.Add(new TextSegment { Text = "\n───\n", IsBold = false, IsItalic = false, IsCode = false });
+            }
             // Handle list items
             else if (line.StartsWith("- ") || line.StartsWith("* "))
             {
@@ -114,6 +125,32 @@ public static class MarkdownRenderer
         var i = 0;
         while (i < text.Length)
         {
+            // Links [text](url)
+            if (i < text.Length - 1 && text[i] == '[' && text[i + 1] != '!')
+            {
+                // Save current segment
+                if (current.Text.Length > 0)
+                {
+                    segments.Add(current);
+                    current = new TextSegment { Text = string.Empty, IsBold = false, IsItalic = false, IsCode = false };
+                }
+
+                // Find closing bracket
+                var closeBracket = text.IndexOf(']', i + 1);
+                if (closeBracket > 0 && closeBracket + 1 < text.Length && text[closeBracket + 1] == '(')
+                {
+                    var linkText = text.Substring(i + 1, closeBracket - i - 1);
+                    var closeParen = text.IndexOf(')', closeBracket + 2);
+                    if (closeParen > 0)
+                    {
+                        // segments.Add(new TextSegment { Text = "🔗 ", IsBold = false, IsItalic = true, IsCode = false });
+                        segments.Add(new TextSegment { Text = linkText, IsBold = false, IsItalic = true, IsCode = false });
+                        i = closeParen + 1;
+                        continue;
+                    }
+                }
+            }
+
             // Inline code
             if (text[i] == '`')
             {
