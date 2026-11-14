@@ -37,13 +37,4 @@ public class Config
     // Tool API keys
     [JsonPropertyName("weather_api_key")]
     public string WeatherApiKey { get; set; } = string.Empty;
-
-    [JsonPropertyName("github_token")]
-    public string GitHubToken { get; set; } = string.Empty;
-
-    [JsonPropertyName("gitverse_base_url")]
-    public string GitVerseBaseUrl { get; set; } = string.Empty;
-
-    [JsonPropertyName("gitverse_token")]
-    public string GitVerseToken { get; set; } = string.Empty;
 }

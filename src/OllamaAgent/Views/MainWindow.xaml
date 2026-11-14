@@ -31,7 +31,14 @@
                         Foreground="White"
                         BorderThickness="0"
                         HorizontalAlignment="Left" />
-                <TextBlock x:Name="ThemeLabel" Text="💻" Foreground="White" VerticalAlignment="Center" />
+                <Button Content="🌙" 
+                        x:Name="ThemeToggleBtn"
+                        Click="ThemeToggleBtn_Click"
+                        Background="Transparent"
+                        Foreground="White"
+                        BorderThickness="0"
+                        HorizontalAlignment="Left"
+                        Width="30" />
             </StackPanel>
         </Border>
 
@@ -97,7 +104,7 @@
         </Border>
 
         <!-- Chat Area -->
-        <ScrollViewer Grid.Row="2" 
+        <ScrollViewer x:Name="ChatScrollViewer" Grid.Row="2" 
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
             <ItemsControl ItemsSource="{Binding ChatMessages}">

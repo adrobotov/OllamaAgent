@@ -5,6 +5,10 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using OllamaAgent.Models;
@@ -22,6 +26,8 @@ public partial class ChatViewModel : ObservableObject
     private ToolExecutor _toolExecutor;
     private Config _config;
     private readonly string _rootDir;
+    private WebClient? _webClient;
+    private WeatherClient? _weatherClient;
 
     [ObservableProperty]
     private string _inputText = string.Empty;
@@ -60,6 +66,11 @@ public partial class ChatViewModel : ObservableObject
     public List<Message> ConversationHistory { get; set; } = new();
 
     public List<ModelInfo> AvailableModels { get; set; } = new();
+
+    /// <summary>
+    /// Exposes config for UI access (e.g., theme toggle)
+    /// </summary>
+    public Config Config => _config;
 
     public ChatViewModel(Config config)
     {
@@ -125,13 +136,13 @@ public partial class ChatViewModel : ObservableObject
         // Weather tools (only if API key is configured)
         if (!string.IsNullOrEmpty(_config.WeatherApiKey))
         {
-            var weatherClient = new WeatherClient(_config.WeatherApiKey);
-            WeatherTools.Register(_toolExecutor, weatherClient);
+            _weatherClient = new WeatherClient(_config.WeatherApiKey);
+            WeatherTools.Register(_toolExecutor, _weatherClient);
         }
 
         // Web tools (always available)
-        var webClient = new WebClient();
-        WebTools.Register(_toolExecutor, webClient);
+        _webClient = new WebClient();
+        WebTools.Register(_toolExecutor, _webClient);
 
         // Log registered tools
         var tools = _toolExecutor.GetTools();
@@ -271,6 +282,9 @@ public partial class ChatViewModel : ObservableObject
                         ToolCalls = toolCalls
                     });
 
+                    // Collect all tool results into a single message
+                    var toolResults = new List<string>();
+                    
                     // Execute each tool call
                     foreach (var toolCall in toolCalls)
                     {
@@ -279,10 +293,9 @@ public partial class ChatViewModel : ObservableObject
                         // Translate tool name to Russian
                         var toolNameRu = TranslateToolName(toolCall.Function.Name);
                         
-                        // Display tool call result
+                        // Add to results collection
                         var status = result.IsError ? "❌" : "✅";
-                        var toolMessage = $"\n\n*{status} Инструмент: `{toolNameRu}`*\n\n`{result.Content}`";
-                        ChatMessages.Add(new ChatMessageViewModel(toolMessage, ChatMessageViewModel.MessageType.ToolResult));
+                        toolResults.Add($"*{status} Инструмент: `{toolNameRu}`*\n\n`{result.Content}`");
 
                         // Add tool result to messages
                         messages.Add(new Message
@@ -292,6 +305,10 @@ public partial class ChatViewModel : ObservableObject
                             ToolName = toolCall.Function.Name
                         });
                     }
+
+                    // Display all tool results as a single message
+                    var combinedToolMessage = string.Join("\n\n---\n\n", toolResults);
+                    ChatMessages.Add(new ChatMessageViewModel(combinedToolMessage, ChatMessageViewModel.MessageType.ToolResult));
 
                     StatusText = "Думаю...";
                     continue; // Continue the loop
@@ -542,5 +559,36 @@ public partial class ChatViewModel : ObservableObject
             "dark" => "light",
             _ => "system"
         };
+
+        // Apply theme to the main window
+        ApplyThemeToWindow();
+    }
+
+    private void ApplyThemeToWindow()
+    {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            var variant = _config.Theme switch
+            {
+                "dark" => ThemeVariant.Dark,
+                "light" => ThemeVariant.Light,
+                _ => null // system theme
+            };
+
+            if (variant != null && desktop.MainWindow is Window window)
+            {
+                window.RequestedThemeVariant = variant;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Dispose resources
+    /// </summary>
+    public void Dispose()
+    {
+        _ollamaClient?.Dispose();
+        _webClient?.Dispose();
+        _weatherClient?.Dispose();
     }
 }

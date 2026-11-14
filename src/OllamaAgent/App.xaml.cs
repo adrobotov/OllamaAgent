@@ -1,8 +1,10 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
+using Avalonia.Styling;
 using System;
 using System.IO;
 using System.Linq;
@@ -22,6 +24,8 @@ public partial class App : Application
         AvaloniaXamlLoader.Load(this);
     }
 
+    private ChatViewModel? _viewModel;
+
     public override void OnFrameworkInitializationCompleted()
     {
         // Bind ViewModel to View
@@ -32,18 +36,48 @@ public partial class App : Application
             DisableAvaloniaDataAnnotationValidation();
 
             var config = LoadConfig();
-            var viewModel = new ChatViewModel(config);
+            _viewModel = new ChatViewModel(config);
             
-            desktop.MainWindow = new MainWindow
+            var mainWindow = new MainWindow
             {
-                DataContext = viewModel
+                DataContext = _viewModel
             };
 
+            // Apply theme from config
+            ApplyTheme(desktop, config.Theme);
+
+            desktop.MainWindow = mainWindow;
+
             // Load models asynchronously on startup
-            _ = viewModel.LoadModelsAsync();
+            _ = _viewModel.LoadModelsAsync();
+
+            // Dispose ViewModel on shutdown
+            desktop.ShutdownRequested += OnShutdownRequested;
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
+    {
+        _viewModel?.Dispose();
+    }
+
+    private static void ApplyTheme(IClassicDesktopStyleApplicationLifetime desktop, string theme)
+    {
+        if (string.IsNullOrEmpty(theme) || theme == "system")
+        {
+            // Use system theme (default)
+            return;
+        }
+
+        var variant = theme == "dark" ? ThemeVariant.Dark : ThemeVariant.Light;
+
+        // Apply theme variant to the window
+        if (desktop.MainWindow is Window window)
+        {
+            window.RequestedThemeVariant = variant;
+        }
     }
 
     private Config LoadConfig()

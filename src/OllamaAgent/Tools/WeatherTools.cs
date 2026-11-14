@@ -11,11 +11,12 @@ namespace OllamaAgent.Tools;
 /// <summary>
 /// Weather API client
 /// </summary>
-public class WeatherClient
+public class WeatherClient : IDisposable
 {
     private readonly HttpClient _httpClient;
     private readonly string _apiKey;
     private readonly string _baseUrl = "http://api.weatherapi.com/v1";
+    private bool _disposed;
 
     public WeatherClient(string apiKey)
     {
@@ -81,6 +82,14 @@ public class WeatherClient
         }
 
         return sb.ToString();
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        
+        _httpClient.Dispose();
+        _disposed = true;
     }
 }
 

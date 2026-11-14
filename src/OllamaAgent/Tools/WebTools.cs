@@ -11,9 +11,10 @@ namespace OllamaAgent.Tools;
 /// <summary>
 /// Web-related tools
 /// </summary>
-public class WebClient
+public class WebClient : IDisposable
 {
     private readonly HttpClient _httpClient;
+    private bool _disposed;
 
     public WebClient()
     {
@@ -129,6 +130,14 @@ public class WebClient
         html = Regex.Replace(html, @"\s+", " ");
 
         return html.Trim();
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        
+        _httpClient.Dispose();
+        _disposed = true;
     }
 }
 
