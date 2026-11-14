@@ -1,6 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
-using Markdig;
 
 namespace OllamaAgent.Helpers;
 
@@ -9,10 +10,6 @@ namespace OllamaAgent.Helpers;
 /// </summary>
 public static class MarkdownRenderer
 {
-    private static readonly MarkdownPipeline _pipeline = new MarkdownPipelineBuilder()
-        .UseAdvancedExtensions()
-        .Build();
-
     /// <summary>
     /// Renders Markdown to a list of formatted text segments
     /// </summary>
@@ -25,12 +22,22 @@ public static class MarkdownRenderer
         var lines = markdown.Split('\n');
         var inCodeBlock = false;
         var codeBuffer = new StringBuilder();
+        var inTable = false;
+        var tableBuffer = new List<string>();
 
         foreach (var line in lines)
         {
             // Handle code blocks
             if (line.TrimStart().StartsWith("```"))
             {
+                // Flush any pending table
+                if (inTable && tableBuffer.Count > 0)
+                {
+                    segments.Add(new TextSegment { Text = RenderTable(tableBuffer), IsBold = false, IsItalic = false, IsCode = false });
+                    tableBuffer.Clear();
+                    inTable = false;
+                }
+
                 if (inCodeBlock)
                 {
                     segments.Add(new TextSegment { Text = codeBuffer.ToString(), IsCode = true, IsBold = false, IsItalic = false });
@@ -41,7 +48,7 @@ public static class MarkdownRenderer
                 {
                     if (codeBuffer.Length > 0)
                     {
-                        segments.Add(new TextSegment { Text = codeBuffer.ToString(), IsCode = false, IsBold = false, IsItalic = false });
+                        segments.Add(new TextSegment { Text = codeBuffer.ToString(), IsBold = false, IsItalic = false, IsCode = false });
                         codeBuffer.Clear();
                     }
                     inCodeBlock = true;
@@ -53,6 +60,35 @@ public static class MarkdownRenderer
             {
                 codeBuffer.AppendLine(line);
                 continue;
+            }
+
+            // Handle tables
+            if (line.Contains('|') && line.Trim().StartsWith('|'))
+            {
+                var trimmed = line.Trim();
+                // Skip separator lines
+                if (trimmed.Contains("---") || trimmed.Contains(":-"))
+                    continue;
+
+                var pipeCount = trimmed.Count(c => c == '|');
+                if (pipeCount >= 2)
+                {
+                    if (!inTable)
+                    {
+                        inTable = true;
+                        tableBuffer.Clear();
+                    }
+                    tableBuffer.Add(line.Trim('|').Trim());
+                    continue;
+                }
+            }
+
+            // Flush table if we're in one and this line doesn't look like a table row
+            if (inTable && tableBuffer.Count > 0)
+            {
+                segments.Add(new TextSegment { Text = RenderTable(tableBuffer), IsBold = false, IsItalic = false, IsCode = false });
+                tableBuffer.Clear();
+                inTable = false;
             }
 
             // Handle headers
@@ -108,13 +144,58 @@ public static class MarkdownRenderer
             }
         }
 
-        // Handle unclosed code block
+        // Flush any remaining content
         if (codeBuffer.Length > 0)
         {
             segments.Add(new TextSegment { Text = codeBuffer.ToString(), IsCode = true, IsBold = false, IsItalic = false });
         }
 
+        if (inTable && tableBuffer.Count > 0)
+        {
+            segments.Add(new TextSegment { Text = RenderTable(tableBuffer), IsBold = false, IsItalic = false, IsCode = false });
+        }
+
         return segments;
+    }
+
+    /// <summary>
+    /// Render a simple text-based table
+    /// </summary>
+    private static string RenderTable(List<string> rows)
+    {
+        if (rows.Count == 0) return string.Empty;
+
+        // Calculate column widths
+        var maxCols = rows.Max(r => r.Split('|').Length);
+        var colWidths = new int[maxCols];
+
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var cells = rows[i].Split('|');
+            for (var j = 0; j < cells.Length && j < maxCols; j++)
+            {
+                colWidths[j] = Math.Max(colWidths[j], cells[j].Trim().Length);
+            }
+        }
+
+        var sb = new StringBuilder();
+        var topBorder = "┌" + string.Join("┬", Enumerable.Range(0, maxCols).Select(j => new string('─', colWidths[j] + 2))) + "┐";
+        sb.AppendLine("\n" + topBorder);
+
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var cells = rows[i].Split('|');
+            sb.Append("│");
+            for (var j = 0; j < maxCols; j++)
+            {
+                var cell = j < cells.Length ? cells[j].Trim() : string.Empty;
+                sb.Append(" " + cell.PadRight(colWidths[j]) + " │");
+            }
+            sb.AppendLine();
+        }
+
+        sb.Append("└" + string.Join("┴", Enumerable.Range(0, maxCols).Select(j => new string('─', colWidths[j] + 2))) + "┘");
+        return sb.ToString();
     }
 
     private static List<TextSegment> ProcessInlineFormatting(string text)
@@ -125,17 +206,39 @@ public static class MarkdownRenderer
         var i = 0;
         while (i < text.Length)
         {
-            // Links [text](url)
-            if (i < text.Length - 1 && text[i] == '[' && text[i + 1] != '!')
+            // Images ![alt](url)
+            if (i < text.Length - 1 && text[i] == '!' && i + 1 < text.Length && text[i + 1] == '[')
             {
-                // Save current segment
                 if (current.Text.Length > 0)
                 {
                     segments.Add(current);
                     current = new TextSegment { Text = string.Empty, IsBold = false, IsItalic = false, IsCode = false };
                 }
 
-                // Find closing bracket
+                var altStart = i + 2;
+                var closeBracket = text.IndexOf(']', altStart);
+                if (closeBracket > 0 && closeBracket + 1 < text.Length && text[closeBracket + 1] == '(')
+                {
+                    var altText = text.Substring(altStart, closeBracket - altStart);
+                    var closeParen = text.IndexOf(')', closeBracket + 2);
+                    if (closeParen > 0)
+                    {
+                        segments.Add(new TextSegment { Text = $"🖼 [{altText}]", IsBold = false, IsItalic = true, IsCode = false });
+                        i = closeParen + 1;
+                        continue;
+                    }
+                }
+            }
+
+            // Links [text](url)
+            if (i < text.Length - 1 && text[i] == '[')
+            {
+                if (current.Text.Length > 0)
+                {
+                    segments.Add(current);
+                    current = new TextSegment { Text = string.Empty, IsBold = false, IsItalic = false, IsCode = false };
+                }
+
                 var closeBracket = text.IndexOf(']', i + 1);
                 if (closeBracket > 0 && closeBracket + 1 < text.Length && text[closeBracket + 1] == '(')
                 {
@@ -143,7 +246,6 @@ public static class MarkdownRenderer
                     var closeParen = text.IndexOf(')', closeBracket + 2);
                     if (closeParen > 0)
                     {
-                        // segments.Add(new TextSegment { Text = "🔗 ", IsBold = false, IsItalic = true, IsCode = false });
                         segments.Add(new TextSegment { Text = linkText, IsBold = false, IsItalic = true, IsCode = false });
                         i = closeParen + 1;
                         continue;
