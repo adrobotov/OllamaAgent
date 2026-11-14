@@ -3,6 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:OllamaAgent.ViewModels"
+        xmlns:models="clr-namespace:OllamaAgent.Models"
         xmlns:controls="clr-namespace:OllamaAgent.Controls"
         mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
         x:Class="OllamaAgent.Views.MainWindow"
@@ -14,7 +15,64 @@
         <vm:ChatViewModel />
     </Design.DataContext>
 
-    <Grid RowDefinitions="Auto, Auto, *, Auto, Auto">
+    <Grid ColumnDefinitions="Auto, *">
+        <!-- Sidebar -->
+        <Border Grid.Column="0" 
+                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                BorderThickness="1,0,1,0">
+            <Grid RowDefinitions="Auto, *, Auto">
+                <!-- Sidebar Header -->
+                <Border Grid.Row="0" Padding="10,10,10,5">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                        <TextBlock Text="Чаты" FontWeight="Bold" VerticalAlignment="Center" />
+                        <Button Content="+" 
+                                Width="24" Height="24" 
+                                Padding="0"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Click="NewChat_Click"
+                                ToolTip.Tip="Новый чат" />
+                    </StackPanel>
+                </Border>
+                
+                <!-- Session List -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding ChatSessions}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="models:ChatSession">
+                                <Border Padding="10,5" 
+                                        Background="{Binding IsSelected, Converter={StaticResource SessionSelectedConverter}}"
+                                        PointerPressed="SessionItem_Click">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="{Binding Name}" 
+                                                   TextTrimming="CharacterEllipsis"
+                                                   FontSize="13" />
+                                         <TextBlock Text="{Binding UpdatedAt, StringFormat={}{0:dd.MM HH:mm}}'" 
+                                                   FontSize="10"
+                                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+                
+                <!-- Sidebar Footer -->
+                <Border Grid.Row="2" Padding="10">
+                    <StackPanel Spacing="5">
+                        <Button Content="🗑 Удалить чат" 
+                                Click="DeleteChat_Click"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Main Content -->
+        <Grid Grid.Column="1" RowDefinitions="Auto, Auto, *, Auto, Auto">
         <!-- Title Bar -->
         <Border Grid.Row="0" Background="{DynamicResource SystemAccentColor}" Padding="10">
             <StackPanel Orientation="Horizontal" Spacing="10">
@@ -201,5 +259,6 @@
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
         </Border>
+        </Grid>
     </Grid>
 </Window>

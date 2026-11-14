@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using OllamaAgent.Models;
 using OllamaAgent.ViewModels;
 using System;
 using System.Collections.ObjectModel;
@@ -221,6 +222,40 @@ public partial class MainWindow : Window
             {
                 topLevel.Clipboard.SetTextAsync(vm.Content);
             }
+        }
+    }
+
+    private void NewChat_Click(object? sender, RoutedEventArgs e)
+    {
+        var viewModel = DataContext as ChatViewModel;
+        viewModel?.NewChatCommand.Execute(null);
+    }
+
+    private void SessionItem_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Border border && border.DataContext is ChatSession session)
+        {
+            // Deselect all
+            foreach (var s in (DataContext as ChatViewModel)?.ChatSessions ?? new ObservableCollection<ChatSession>())
+            {
+                s.IsSelected = false;
+            }
+            
+            // Select this one
+            session.IsSelected = true;
+            
+            // Load the session
+            var viewModel = DataContext as ChatViewModel;
+            viewModel?.LoadSession(session.Id);
+        }
+    }
+
+    private void DeleteChat_Click(object? sender, RoutedEventArgs e)
+    {
+        var viewModel = DataContext as ChatViewModel;
+        if (viewModel?.ActiveSession != null)
+        {
+            viewModel.DeleteChatCommand.Execute(viewModel.ActiveSession.Id);
         }
     }
 }

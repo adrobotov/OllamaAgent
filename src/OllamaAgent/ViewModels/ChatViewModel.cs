@@ -75,6 +75,24 @@ public partial class ChatViewModel : ObservableObject
     public List<ModelInfo> AvailableModels { get; set; } = new();
 
     /// <summary>
+    /// List of chat sessions
+    /// </summary>
+    public ObservableCollection<ChatSession> ChatSessions { get; } = new();
+
+    /// <summary>
+    /// Currently active session
+    /// </summary>
+    public ChatSession? ActiveSession { get; private set; }
+
+    /// <summary>
+    /// Current session name for display
+    /// </summary>
+    [ObservableProperty]
+    private string _sessionName = "Новый чат";
+
+    private string SessionsDir => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "sessions");
+
+    /// <summary>
     /// Exposes config for UI access (e.g., theme toggle)
     /// </summary>
     public Config Config => _config;
@@ -99,6 +117,13 @@ public partial class ChatViewModel : ObservableObject
         {
             SelectedModelDisplay = config.Model;
         }
+        
+        // Load all sessions
+        LoadAllSessions();
+        
+        // Create initial session
+        ActiveSession = new ChatSession { Name = "Новый чат", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        ChatSessions.Add(ActiveSession!);
     }
 
     // Update config when properties change
@@ -205,6 +230,13 @@ public partial class ChatViewModel : ObservableObject
 
         var userMessage = InputText.Trim();
         InputText = string.Empty;
+
+        // Update session name from first message
+        if (ActiveSession != null && ActiveSession.Messages.Count == 0)
+        {
+            ActiveSession.Name = userMessage.Length > 50 ? userMessage[..50] + "..." : userMessage;
+            SessionName = ActiveSession.Name;
+        }
 
         // Add user message to UI
         ChatMessages.Add(new ChatMessageViewModel(userMessage, ChatMessageViewModel.MessageType.User));
@@ -344,6 +376,9 @@ public partial class ChatViewModel : ObservableObject
             }
 
             StatusText = "Готово";
+            
+            // Save session after successful response
+            SaveCurrentSession();
         }
         catch (OperationCanceledException)
         {
@@ -572,6 +607,197 @@ public partial class ChatViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Create a new chat session
+    /// </summary>
+    [RelayCommand]
+    private void NewChat()
+    {
+        SaveCurrentSession();
+        
+        ChatMessages.Clear();
+        ConversationHistory.Clear();
+        SessionName = "Новый чат";
+        ActiveSession = new ChatSession { Name = "Новый чат", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        ChatSessions.Add(ActiveSession!);
+        StatusText = "Создан новый чат";
+    }
+
+    /// <summary>
+    /// Save current session to disk
+    /// </summary>
+    private void SaveCurrentSession()
+    {
+        if (ActiveSession == null) return;
+        
+        ActiveSession.UpdatedAt = DateTime.UtcNow;
+        ActiveSession.Messages.Clear();
+        
+        foreach (var msg in ConversationHistory)
+        {
+            ActiveSession.Messages.Add(new ChatMessage
+            {
+                Role = msg.Role,
+                Content = msg.Content,
+                ToolName = msg.ToolName,
+                ToolCalls = msg.ToolCalls?.Select(tc => new ChatToolCall
+                {
+                    Function = new ChatFunctionCall
+                    {
+                        Name = tc.Function.Name,
+                        Arguments = tc.Function.Arguments
+                    }
+                }).ToList()
+            });
+        }
+
+        ActiveSession.Model = _config.Model;
+
+        try
+        {
+            var dir = SessionsDir;
+            Directory.CreateDirectory(dir);
+            var path = Path.Combine(dir, $"{ActiveSession.Id}.json");
+            var json = System.Text.Json.JsonSerializer.Serialize(ActiveSession, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(path, json);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to save session: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Load a chat session by ID
+    /// </summary>
+    public void LoadSession(string sessionId)
+    {
+        SaveCurrentSession();
+        
+        try
+        {
+            var dir = SessionsDir;
+            var path = Path.Combine(dir, $"{sessionId}.json");
+            
+            if (!File.Exists(path)) return;
+            
+            var json = File.ReadAllText(path);
+            var session = System.Text.Json.JsonSerializer.Deserialize<ChatSession>(json);
+            if (session == null) return;
+            
+            ActiveSession = session;
+            SessionName = session.Name;
+            
+            ConversationHistory.Clear();
+            ChatMessages.Clear();
+            
+            foreach (var msg in session.Messages)
+            {
+                ConversationHistory.Add(new Message
+                {
+                    Role = msg.Role,
+                    Content = msg.Content,
+                    ToolName = msg.ToolName,
+                    ToolCalls = msg.ToolCalls?.Select(tc => new ToolCall
+                    {
+                        Function = new FunctionCall
+                        {
+                            Name = tc.Function.Name,
+                            Arguments = tc.Function.Arguments
+                        }
+                    }).ToList()
+                });
+                
+                // Add to UI
+                var type = msg.Role switch
+                {
+                    "user" => ChatMessageViewModel.MessageType.User,
+                    "assistant" => ChatMessageViewModel.MessageType.Assistant,
+                    "tool" => ChatMessageViewModel.MessageType.ToolResult,
+                    _ => ChatMessageViewModel.MessageType.Assistant
+                };
+                
+                ChatMessages.Add(new ChatMessageViewModel(msg.Content, type));
+            }
+            
+            if (!string.IsNullOrEmpty(session.Model))
+            {
+                _config.Model = session.Model;
+            }
+            
+            StatusText = $"Чат загружен: {session.Name}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Ошибка загрузки: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Delete a chat session
+    /// </summary>
+    [RelayCommand]
+    private void DeleteChat(string sessionId)
+    {
+        try
+        {
+            var dir = SessionsDir;
+            var path = Path.Combine(dir, $"{sessionId}.json");
+            if (File.Exists(path)) File.Delete(path);
+            
+            var session = ChatSessions.FirstOrDefault(s => s.Id == sessionId);
+            if (session != null)
+            {
+                ChatSessions.Remove(session);
+                
+                if (ActiveSession?.Id == sessionId)
+                {
+                    NewChatCommand.Execute(null);
+                }
+            }
+            
+            StatusText = "Чат удалён";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Ошибка удаления: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Load all sessions on startup
+    /// </summary>
+    private void LoadAllSessions()
+    {
+        try
+        {
+            var dir = SessionsDir;
+            Directory.CreateDirectory(dir);
+            
+            var files = Directory.GetFiles(dir, "*.json");
+            foreach (var file in files)
+            {
+                try
+                {
+                    var json = File.ReadAllText(file);
+                    var session = System.Text.Json.JsonSerializer.Deserialize<ChatSession>(json);
+                    if (session != null)
+                    {
+                        ChatSessions.Add(session);
+                    }
+                }
+                catch
+                {
+                    // Skip invalid files
+                }
+            }
+        }
+        catch
+        {
+            // Ignore errors on startup
+        }
+    }
+
+    /// <summary>
     /// Toggle theme
     /// </summary>
     [RelayCommand]
@@ -611,6 +837,9 @@ public partial class ChatViewModel : ObservableObject
     /// </summary>
     public void Dispose()
     {
+        // Save current session before disposing
+        SaveCurrentSession();
+        
         _ollamaClient?.Dispose();
         _webClient?.Dispose();
         _weatherClient?.Dispose();
