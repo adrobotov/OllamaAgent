@@ -566,7 +566,7 @@ public partial class ChatViewModel : ObservableObject
         }
         
         // Models known to support tools (specific versions only)
-        var toolSupportingFamilies = new[] { "llama", "gemma", "mistral", "mixtral", "qwen" };
+        var toolSupportingFamilies = new[] { "llama", "gemma", "mistral", "mixtral", "qwen", "codellama", "codegemma" };
         var toolSupportingNames = new[] { "llama3.1", "llama3.2", "gemma2", "gemma3", "gemma4", "mistral-large", "qwen2.5", "qwen3" };
         
         foreach (var family in toolSupportingFamilies)
@@ -580,7 +580,7 @@ public partial class ChatViewModel : ObservableObject
         }
         
         // Models known NOT to support tools
-        var noToolNames = new[] { "saiga", "falcon", "stable-code", "tinyllama", "deepseek", "codellama", "codegemma", "qwq" };
+        var noToolNames = new[] { "saiga", "falcon", "stable-code", "tinyllama", "deepseek", "qwq" };
         foreach (var name in noToolNames)
         {
             if (nameLower.Contains(name)) return false;
