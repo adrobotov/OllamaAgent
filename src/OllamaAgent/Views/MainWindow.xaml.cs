@@ -353,6 +353,28 @@ public partial class MainWindow : Window
         this.Hide();
     }
 
+    /// <summary>
+    /// Minimize window to tray (hide it)
+    /// </summary>
+    private void MinimizeToTray_Click(object? sender, RoutedEventArgs e)
+    {
+        this.Hide();
+    }
+
+    /// <summary>
+    /// Close the application completely
+    /// </summary>
+    private void CloseWindow_Click(object? sender, RoutedEventArgs e)
+    {
+        // Dispose ViewModel resources
+        if (DataContext is ChatViewModel vm)
+        {
+            vm.Dispose();
+        }
+        
+        this.Close();
+    }
+
     private void MainWindow_KeyDown(object? sender, KeyEventArgs e)
     {
         var viewModel = DataContext as ChatViewModel;

@@ -120,6 +120,12 @@
         <Grid Grid.Column="1" RowDefinitions="Auto, Auto, *, Auto, Auto, Auto">
         <!-- Title Bar -->
         <Border Grid.Row="0" Background="{DynamicResource SystemAccentColor}" Padding="10">
+            <Border.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Свернуть в трей" Click="MinimizeToTray_Click" />
+                    <MenuItem Header="Закрыть" Click="CloseWindow_Click" />
+                </ContextMenu>
+            </Border.ContextMenu>
             <StackPanel Orientation="Horizontal" Spacing="10">
                 <!-- App Logo -->
                 <Image Source="avares://OllamaAgent/Assets/icons/icon-64.png" 
