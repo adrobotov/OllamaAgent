@@ -13,7 +13,7 @@
         <vm:ChatViewModel />
     </Design.DataContext>
 
-    <Grid RowDefinitions="Auto, *, Auto">
+    <Grid RowDefinitions="Auto, Auto, *, Auto">
         <!-- Title Bar -->
         <Border Grid.Row="0" Background="{DynamicResource SystemAccentColor}" Padding="10">
             <StackPanel Orientation="Horizontal" Spacing="10">
@@ -35,10 +35,9 @@
             </StackPanel>
         </Border>
 
-        <!-- Settings Panel -->
-        <Border Grid.Row="0" 
+        <!-- Settings Panel (below title bar) -->
+        <Border Grid.Row="1" 
                 Background="{DynamicResource SystemFillColorCautionBackground}"
-                Margin="0,50,0,0"
                 IsVisible="{Binding ShowSettings}">
             <ScrollViewer>
                 <StackPanel Margin="10" Spacing="10">
@@ -85,7 +84,7 @@
         </Border>
 
         <!-- Chat Area -->
-        <ScrollViewer Grid.Row="1" 
+        <ScrollViewer Grid.Row="2" 
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
             <ItemsControl ItemsSource="{Binding ChatMessages}">
@@ -108,7 +107,7 @@
         </ScrollViewer>
 
         <!-- Input Area -->
-        <Border Grid.Row="2" 
+        <Border Grid.Row="3" 
                 Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
                 Padding="10">
             <Grid ColumnDefinitions="*, Auto">
@@ -128,7 +127,7 @@
         </Border>
 
         <!-- Status Bar -->
-        <TextBlock Grid.Row="2"
+        <TextBlock Grid.Row="3"
                    VerticalAlignment="Center"
                    HorizontalAlignment="Left"
                    Margin="10,35,0,0"

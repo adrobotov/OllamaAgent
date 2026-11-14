@@ -28,5 +28,5 @@ public class FunctionTool
     public string Description { get; set; } = string.Empty;
 
     [JsonPropertyName("parameters")]
-    public Dictionary<string, object?> Parameters { get; set; } = new();
+    public Dictionary<string, object> Parameters { get; set; } = new();
 }

@@ -90,6 +90,17 @@ public partial class ChatViewModel : ObservableObject
         _ollamaClient = new OllamaClient(value);
     }
 
+    partial void OnSelectedModelDisplayChanged(string value)
+    {
+        // Find matching model and update config
+        var model = AvailableModels.FirstOrDefault(m => m.DisplayName == value);
+        if (model != null)
+        {
+            _config.Model = model.Name;
+            Console.WriteLine($"🔄 Model changed to: {model.Name}");
+        }
+    }
+
     partial void OnSystemPromptChanged(string value)
     {
         _config.SystemPrompt = value;
@@ -213,6 +224,7 @@ public partial class ChatViewModel : ObservableObject
             messages.AddRange(history);
 
             var hasTools = _toolExecutor.GetTools().Count > 0;
+            var useTools = hasTools && ModelSupportsTools(_config.Model);
             var maxTurns = 10;
 
             for (var turn = 0; turn < maxTurns; turn++)
@@ -222,23 +234,17 @@ public partial class ChatViewModel : ObservableObject
                     Model = _config.Model,
                     Messages = messages,
                     Stream = true
-                    // Think = true  // TEMP: disable think to test
                 };
 
-                if (hasTools)
+                if (useTools)
                 {
                     request.Tools = _toolExecutor.GetTools().Select(t => (object)t).ToList();
                     var toolNames = _toolExecutor.GetTools().Select(t => t.Function.Name).ToList();
                     Console.WriteLine($"🔧 Sending {toolNames.Count} tools: [{string.Join(", ", toolNames)}]");
-                    
-                    // Debug: serialize tools to see what they look like
-                    var toolsJson = JsonSerializer.Serialize(request.Tools, new JsonSerializerOptions 
-                    { 
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase, 
-                        WriteIndented = true,
-                        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-                    });
-                    Console.WriteLine($"[ToolsJSON] {toolsJson}");
+                }
+                else
+                {
+                    Console.WriteLine($"📝 No tools (hasTools={hasTools}, supported={ModelSupportsTools(_config.Model)})");
                 }
 
                 // Stream the response
@@ -312,6 +318,40 @@ public partial class ChatViewModel : ObservableObject
         {
             IsProcessing = false;
         }
+    }
+
+    /// <summary>
+    /// Check if a model supports tool calling based on its name/family
+    /// </summary>
+    private static bool ModelSupportsTools(string modelName)
+    {
+        if (string.IsNullOrEmpty(modelName)) return false;
+        
+        var nameLower = modelName.ToLower();
+        
+        // Models known to support tools
+        var toolSupportingFamilies = new[] { "llama", "gemma", "qwen", "mistral", "mixtral", "codellama", "codegemma" };
+        var toolSupportingNames = new[] { "llama3.1", "llama3.2", "gemma2", "gemma3", "qwen2.5", "qwen3", "mistral-large", "mixtral" };
+        
+        foreach (var family in toolSupportingFamilies)
+        {
+            if (nameLower.Contains(family)) return true;
+        }
+        
+        foreach (var name in toolSupportingNames)
+        {
+            if (nameLower.Contains(name)) return true;
+        }
+        
+        // Models known NOT to support tools
+        var noToolNames = new[] { "saiga", "falcon", "stable-code", "tinyllama" };
+        foreach (var name in noToolNames)
+        {
+            if (nameLower.Contains(name)) return false;
+        }
+        
+        // Default: assume no tool support for unknown models
+        return false;
     }
 
     /// <summary>

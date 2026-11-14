@@ -74,9 +74,7 @@ public class ToolExecutor
         {
             var args = toolCall.Function.Arguments switch
             {
-                Dictionary<string, object?> nullableDict => nullableDict.ToDictionary(
-                    kvp => kvp.Key,
-                    kvp => (object)(kvp.Value ?? string.Empty)),
+                Dictionary<string, object> dict => dict,
                 JsonElement element => JsonToDictionary(element).ToDictionary(
                     kvp => kvp.Key,
                     kvp => (object)(kvp.Value ?? string.Empty)),
