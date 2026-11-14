@@ -209,7 +209,7 @@ public partial class MainWindow : Window
 
     private void CollapseToggle_Click(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button btn && btn.DataContext is ChatMessageViewModel vm)
+        if (sender is Button btn && btn.Tag is ChatMessageViewModel vm)
         {
             vm.ToggleCollapse();
         }
