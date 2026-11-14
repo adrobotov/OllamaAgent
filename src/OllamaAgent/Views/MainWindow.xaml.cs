@@ -9,6 +9,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace OllamaAgent.Views;
 
@@ -221,14 +222,33 @@ public partial class MainWindow : Window
 
     private void CopyMessage_Click(object? sender, RoutedEventArgs e)
     {
-        if (sender is MenuItem menuItem && menuItem.DataContext is ChatMessageViewModel vm)
+        ChatMessageViewModel? vm = null;
+        
+        // Handle both button and menu item clicks
+        if (sender is Button btn)
+        {
+            vm = btn.Tag as ChatMessageViewModel;
+        }
+        else if (sender is MenuItem menuItem && menuItem.DataContext is ChatMessageViewModel menuVm)
+        {
+            vm = menuVm;
+        }
+        
+        if (vm != null)
         {
             // Copy to clipboard using Avalonia's clipboard
             var topLevel = TopLevel.GetTopLevel(this);
             if (topLevel?.Clipboard != null)
             {
-                topLevel.Clipboard.SetTextAsync(vm.Content);
+                _ = topLevel.Clipboard.SetTextAsync(vm.Content);
             }
+            
+            // Update status
+            Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                var viewModel = DataContext as ChatViewModel;
+                viewModel?.SetStatus("✅ Скопировано");
+            });
         }
     }
 

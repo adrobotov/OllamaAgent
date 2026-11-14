@@ -131,9 +131,7 @@
                                   ItemsSource="{Binding ModelOptions}" 
                                   SelectedItem="{Binding SelectedModelDisplay}"
                                   Height="30"
-                                  Margin="10,0"
-                                  HorizontalAlignment="Right"
-                                  Width="250" />
+                                  Margin="10,0" />
                     </Grid>
 
                     <!-- Weather API Key -->
@@ -192,20 +190,33 @@
                                 Background="{Binding BackgroundColor}">
                             <Panel>
                                 <StackPanel Spacing="5">
-                                    <Grid ColumnDefinitions="Auto, *, Auto">
+                                    <Grid ColumnDefinitions="Auto, *, Auto, Auto">
                                         <TextBlock Grid.Column="0" Text="{Binding Sender}" 
                                                    FontWeight="Bold"
                                                    Foreground="{Binding SenderColor}" />
                                     
-                                        <!-- Collapse/Expand button for tool results -->
+                                        <!-- Copy button -->
                                         <Button Grid.Column="2" 
+                                                Content="📋"
+                                                Click="CopyMessage_Click"
+                                                Width="24" Height="24"
+                                                Padding="0"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Tag="{Binding}"
+                                                ToolTip.Tip="Копировать текст"
+                                                Margin="5,0,0,0" />
+                                    
+                                        <!-- Collapse/Expand button for tool results -->
+                                        <Button Grid.Column="3" 
                                                 Content="{Binding IsCollapsed, Converter={StaticResource CollapseToggleConverter}}"
                                                 Click="CollapseToggle_Click"
                                                 Width="24" Height="24"
                                                 Padding="0"
                                                 Background="Transparent"
                                                 BorderThickness="0"
-                                                Tag="{Binding Type}">
+                                                Tag="{Binding Type}"
+                                                IsVisible="{Binding Type, Converter={StaticResource ToolResultVisibilityConverter}}">
                                             <Button.ContextMenu>
                                                 <ContextMenu>
                                                     <MenuItem Header="Копировать" Click="CopyMessage_Click" />

@@ -744,6 +744,14 @@ public partial class ChatViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Set status text (for programmatic use)
+    /// </summary>
+    public void SetStatus(string text)
+    {
+        StatusText = text;
+    }
+
+    /// <summary>
     /// Create a new chat session
     /// </summary>
     [RelayCommand]
