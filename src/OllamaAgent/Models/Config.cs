@@ -39,6 +39,13 @@ public class Config
     [JsonPropertyName("weather_api_key")]
     public string WeatherApiKey { get; set; } = string.Empty;
 
+    // Thinking mode
+    [JsonPropertyName("thinking_enabled")]
+    public bool ThinkingEnabled { get; set; } = false;
+
+    [JsonPropertyName("thinking_depth")]
+    public string ThinkingDepth { get; set; } = "medium";
+
     /// <summary>
     /// Validates if the BaseUrl is a valid HTTP/HTTPS URL
     /// </summary>
