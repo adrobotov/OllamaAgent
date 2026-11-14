@@ -345,4 +345,11 @@ public partial class MainWindow : Window
             viewModel?.RemoveFromPendingConfirmations(confirmation);
         }
     }
+
+    private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        // Hide window instead of closing (minimize to tray)
+        e.Cancel = true;
+        this.Hide();
+    }
 }
