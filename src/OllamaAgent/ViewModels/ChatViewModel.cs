@@ -134,6 +134,11 @@ public partial class ChatViewModel : ObservableObject
     private string SessionsDir => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "sessions");
 
     /// <summary>
+    /// Path to the auto-saved config file
+    /// </summary>
+    private string ConfigPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
+
+    /// <summary>
     /// Exposes config for UI access (e.g., theme toggle)
     /// </summary>
     public Config Config => _config;
@@ -174,6 +179,7 @@ public partial class ChatViewModel : ObservableObject
     {
         _config.BaseUrl = value;
         _ollamaClient = new OllamaClient(value);
+        SaveConfigAuto();
     }
 
     partial void OnSelectedModelDisplayChanged(string value)
@@ -193,6 +199,7 @@ public partial class ChatViewModel : ObservableObject
                 _config.Model = value;
                 Console.WriteLine($"⚠️ Model display name not found in list, using: {value}");
             }
+            SaveConfigAuto();
         }
         catch (Exception ex)
         {
@@ -204,21 +211,53 @@ public partial class ChatViewModel : ObservableObject
     partial void OnSystemPromptChanged(string value)
     {
         _config.SystemPrompt = value;
+        SaveConfigAuto();
     }
 
     partial void OnWeatherApiKeyChanged(string value)
     {
         _config.WeatherApiKey = value;
+        SaveConfigAuto();
     }
 
     partial void OnThinkingEnabledChanged(bool value)
     {
         _config.ThinkingEnabled = value;
+        SaveConfigAuto();
     }
 
     partial void OnSelectedThinkingDepthChanged(string value)
     {
         _config.ThinkingDepth = value;
+        SaveConfigAuto();
+    }
+
+    /// <summary>
+    /// Auto-save config to disk (debounced)
+    /// </summary>
+    private System.Threading.Timer? _configSaveTimer;
+    private void SaveConfigAuto()
+    {
+        try
+        {
+            _configSaveTimer?.Dispose();
+            _configSaveTimer = new System.Threading.Timer(_ =>
+            {
+                try
+                {
+                    var json = System.Text.Json.JsonSerializer.Serialize(_config, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                    File.WriteAllText(ConfigPath, json);
+                }
+                catch
+                {
+                    // Ignore save errors
+                }
+            }, null, 1000, System.Threading.Timeout.Infinite);
+        }
+        catch
+        {
+            // Ignore timer errors
+        }
     }
 
     private void RegisterTools()
@@ -1092,6 +1131,7 @@ public partial class ChatViewModel : ObservableObject
         // Save current session before disposing
         SaveCurrentSession();
         
+        _configSaveTimer?.Dispose();
         _ollamaClient?.Dispose();
         _webClient?.Dispose();
         _weatherClient?.Dispose();
