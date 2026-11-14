@@ -131,6 +131,22 @@ public partial class ChatViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasPendingConfirmations;
 
+    /// <summary>
+    /// Search text for filtering sessions
+    /// </summary>
+    [ObservableProperty]
+    private string _sessionSearchText = string.Empty;
+
+    /// <summary>
+    /// Filtered sessions based on search text
+    /// </summary>
+    public IEnumerable<ChatSession> FilteredSessions =>
+        string.IsNullOrWhiteSpace(SessionSearchText)
+            ? ChatSessions
+            : ChatSessions.Where(s =>
+                s.Name.Contains(SessionSearchText, StringComparison.OrdinalIgnoreCase) ||
+                s.Messages.Any(m => m.Content.Contains(SessionSearchText, StringComparison.OrdinalIgnoreCase)));
+
     private string SessionsDir => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "sessions");
 
     /// <summary>

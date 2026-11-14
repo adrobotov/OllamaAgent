@@ -37,28 +37,39 @@
                 </Border>
                 
                 <!-- Session List -->
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
-                        <ItemsControl ItemsSource="{Binding ChatSessions}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="models:ChatSession">
-                                    <Border Padding="10,5" 
-                                            Background="{Binding IsSelected, Converter={StaticResource SessionSelectedConverter}}"
-                                            PointerPressed="SessionItem_Click">
-                                        <StackPanel Spacing="2">
-                                            <TextBlock Text="{Binding Name}" 
-                                                       TextTrimming="CharacterEllipsis"
-                                                       FontSize="13" />
-                                            <TextBlock Text="{Binding UpdatedAt, StringFormat={}{0:dd.MM HH:mm}}" 
-                                                       FontSize="10"
-                                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </ScrollViewer>
+                <Grid Grid.Row="1" RowDefinitions="Auto, *">
+                    <!-- Search Box -->
+                    <TextBox Grid.Row="0" 
+                             Text="{Binding SessionSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Watermark="Поиск чатов..."
+                             Margin="10,5,10,5"
+                             Height="30"
+                             FontSize="12" />
+                    
+                    <!-- Session List -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <ItemsControl ItemsSource="{Binding FilteredSessions}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="models:ChatSession">
+                                        <Border Padding="10,5" 
+                                                Background="{Binding IsSelected, Converter={StaticResource SessionSelectedConverter}}"
+                                                PointerPressed="SessionItem_Click">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="{Binding Name}" 
+                                                           TextTrimming="CharacterEllipsis"
+                                                           FontSize="13" />
+                                                <TextBlock Text="{Binding UpdatedAt, StringFormat={}{0:dd.MM HH:mm}}" 
+                                                           FontSize="10"
+                                                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
                 
                 <!-- Sidebar Footer -->
                 <Border Grid.Row="2" Padding="10">
