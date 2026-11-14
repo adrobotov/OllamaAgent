@@ -197,4 +197,30 @@ public partial class MainWindow : Window
             };
         }
     }
+
+    private void CollapseToggle_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.DataContext is ChatMessageViewModel vm)
+        {
+            vm.ToggleCollapse();
+        }
+    }
+
+    private void UpdateToolResultButtons()
+    {
+        // This is handled by the ItemsControl template binding
+    }
+
+    private void CopyMessage_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem menuItem && menuItem.DataContext is ChatMessageViewModel vm)
+        {
+            // Copy to clipboard using Avalonia's clipboard
+            var topLevel = TopLevel.GetTopLevel(this);
+            if (topLevel?.Clipboard != null)
+            {
+                topLevel.Clipboard.SetTextAsync(vm.Content);
+            }
+        }
+    }
 }

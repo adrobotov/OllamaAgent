@@ -1,8 +1,13 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:OllamaAgent.Converters"
              x:Class="OllamaAgent.App"
              RequestedThemeVariant="Default">
     <Application.Styles>
         <FluentTheme />
     </Application.Styles>
+    <Application.Resources>
+        <converters:BoolToCollapseIconConverter x:Key="CollapseToggleConverter" />
+        <converters:MessageTypeToVisibilityConverter x:Key="ToolResultVisibilityConverter" />
+    </Application.Resources>
 </Application>

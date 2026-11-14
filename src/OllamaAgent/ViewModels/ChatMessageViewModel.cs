@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using OllamaAgent.Helpers;
 
 namespace OllamaAgent.ViewModels;
 
@@ -35,10 +36,29 @@ public partial class ChatMessageViewModel : ObservableObject
     [ObservableProperty]
     private Avalonia.Media.IBrush _senderColor = Avalonia.Media.Brushes.Transparent;
 
+    /// <summary>
+    /// Whether the message content is collapsed (for tool results)
+    /// </summary>
+    [ObservableProperty]
+    private bool _isCollapsed;
+
+    /// <summary>
+    /// Rendered Markdown segments for rich display
+    /// </summary>
+    public List<MarkdownRenderer.TextSegment> MarkdownSegments { get; }
+
+    /// <summary>
+    /// Truncated preview for collapsed state
+    /// </summary>
+    public string PreviewText => Content.Length > 200 
+        ? Content[..200] + "..." 
+        : Content;
+
     public ChatMessageViewModel(string content, MessageType type)
     {
         Content = content;
         Type = type;
+        IsCollapsed = type == MessageType.ToolResult;
         
         Sender = type switch
         {
@@ -67,5 +87,30 @@ public partial class ChatMessageViewModel : ObservableObject
             MessageType.Error => new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.FromRgb(200, 0, 0)),
             _ => Avalonia.Media.Brushes.Black
         };
+
+        // Render Markdown for assistant messages
+        MarkdownSegments = type == MessageType.Assistant 
+            ? MarkdownRenderer.Render(content) 
+            : new List<MarkdownRenderer.TextSegment> { new() { Text = content, IsBold = false, IsItalic = false, IsCode = false } };
+    }
+
+    /// <summary>
+    /// Toggle collapsed state
+    /// </summary>
+    public void ToggleCollapse()
+    {
+        IsCollapsed = !IsCollapsed;
+    }
+
+    /// <summary>
+    /// Update content and re-render Markdown
+    /// </summary>
+    public void UpdateContent(string newContent)
+    {
+        Content = newContent;
+        MarkdownSegments.Clear();
+        MarkdownSegments.AddRange(_type == MessageType.Assistant 
+            ? MarkdownRenderer.Render(newContent) 
+            : new List<MarkdownRenderer.TextSegment> { new() { Text = newContent, IsBold = false, IsItalic = false, IsCode = false } });
     }
 }

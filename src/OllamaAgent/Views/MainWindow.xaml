@@ -3,6 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:OllamaAgent.ViewModels"
+        xmlns:controls="clr-namespace:OllamaAgent.Controls"
         mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
         x:Class="OllamaAgent.Views.MainWindow"
         Title="ИИ Чат — Ollama"
@@ -104,27 +105,68 @@
         </Border>
 
         <!-- Chat Area -->
-        <ScrollViewer x:Name="ChatScrollViewer" Grid.Row="2" 
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
-            <ItemsControl ItemsSource="{Binding ChatMessages}">
+        <Grid Grid.Row="2" RowDefinitions="*, Auto">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding ChatMessages}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="vm:ChatMessageViewModel">
                         <Border Padding="10" Margin="5" 
                                 Background="{Binding BackgroundColor}">
-                            <StackPanel Spacing="5">
-                                <TextBlock Text="{Binding Sender}" 
-                                           FontWeight="Bold"
-                                           Foreground="{Binding SenderColor}" />
-                                <TextBlock Text="{Binding Content}" 
-                                           TextWrapping="Wrap"
-                                           FontFamily="Consolas, monospace" />
-                            </StackPanel>
+                            <Panel>
+                                <StackPanel Spacing="5">
+                                    <Grid ColumnDefinitions="Auto, *, Auto">
+                                        <TextBlock Grid.Column="0" Text="{Binding Sender}" 
+                                                   FontWeight="Bold"
+                                                   Foreground="{Binding SenderColor}" />
+                                        
+                                        <!-- Collapse/Expand button for tool results -->
+                                        <Button Grid.Column="2" 
+                                                Content="{Binding IsCollapsed, Converter={StaticResource CollapseToggleConverter}}"
+                                                Click="CollapseToggle_Click"
+                                                Width="24" Height="24"
+                                                Padding="0"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Tag="{Binding Type}">
+                                            <Button.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Копировать" Click="CopyMessage_Click" />
+                                                </ContextMenu>
+                                            </Button.ContextMenu>
+                                        </Button>
+                                    </Grid>
+                                    
+                                    <!-- Collapsed preview -->
+                                    <TextBlock Text="{Binding PreviewText}" 
+                                               TextWrapping="Wrap"
+                                               IsVisible="{Binding IsCollapsed}"
+                                               FontSize="13"
+                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+                                    
+                                    <!-- Expanded content -->
+                                    <controls:MarkdownTextBlock Text="{Binding Content}" 
+                                                                IsVisible="{Binding !IsCollapsed}" />
+                                </StackPanel>
+                            </Panel>
                         </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
+
+            <!-- Typing Indicator -->
+            <Border Grid.Row="1" 
+                    Background="Transparent"
+                    IsVisible="{Binding ShowTypingIndicator}"
+                    Padding="10">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                    <TextBlock Text="Ассистор печатает..." 
+                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                               FontSize="12" />
+                </StackPanel>
+            </Border>
+        </Grid>
 
         <!-- Input Area -->
         <Border Grid.Row="3" 

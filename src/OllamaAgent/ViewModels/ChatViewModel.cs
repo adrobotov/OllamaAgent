@@ -39,6 +39,12 @@ public partial class ChatViewModel : ObservableObject
     [ObservableProperty]
     private bool _isProcessing;
 
+    /// <summary>
+    /// Shows typing indicator when AI is processing
+    /// </summary>
+    [ObservableProperty]
+    private bool _showTypingIndicator;
+
     [ObservableProperty]
     private bool _showSettings;
 
@@ -218,6 +224,7 @@ public partial class ChatViewModel : ObservableObject
     private async Task ProcessAIResponseAsync(string userText, CancellationToken cancellationToken = default)
     {
         IsProcessing = true;
+        ShowTypingIndicator = true;
         StatusText = "Думаю...";
 
         try
@@ -350,6 +357,7 @@ public partial class ChatViewModel : ObservableObject
         }
         finally
         {
+            ShowTypingIndicator = false;
             IsProcessing = false;
         }
     }
