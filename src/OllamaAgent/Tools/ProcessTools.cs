@@ -15,10 +15,10 @@ public static class ProcessTools
 {
     public static void Register(ToolExecutor executor)
     {
-        // run_command: Execute a shell command
+        // run_command: Execute a shell command (sandboxed)
         executor.Register(
             "run_command",
-            "Execute a shell command and return the stdout output. Use for running any system command.",
+            "Execute a shell command and return the stdout output. Use for running any system command. Note: Some dangerous commands are blocked for security.",
             new Dictionary<string, object>
             {
                 ["type"] = "object",
@@ -36,6 +36,17 @@ public static class ProcessTools
             {
                 if (!args.TryGetValue("command", out var cmdObj) || cmdObj is not string command)
                     return new ToolResult { Content = "Error: missing required argument: command", IsError = true };
+
+                // Security: Check for dangerous commands
+                var blockedPatterns = new[] { "rm -rf", "del /f /q", "format", "diskpart", "shutdown /s", "shutdown /r", "poweroff", "reboot", "mkfs", "dd if=", "chmod 777", "chown -R", "wget http", "curl http" };
+                var commandLower = command.ToLower();
+                foreach (var pattern in blockedPatterns)
+                {
+                    if (commandLower.Contains(pattern))
+                    {
+                        return new ToolResult { Content = $"Error: command blocked for security reasons: '{pattern}'", IsError = true };
+                    }
+                }
 
                 var startInfo = new ProcessStartInfo
                 {
