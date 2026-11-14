@@ -567,7 +567,7 @@ public partial class ChatViewModel : ObservableObject
         
         // Models known to support tools (specific versions only)
         var toolSupportingFamilies = new[] { "llama", "gemma", "mistral", "mixtral", "qwen" };
-        var toolSupportingNames = new[] { "llama3.1", "llama3.2", "gemma2", "gemma3", "mistral-large", "qwen2.5", "qwen3" };
+        var toolSupportingNames = new[] { "llama3.1", "llama3.2", "gemma2", "gemma3", "gemma4", "mistral-large", "qwen2.5", "qwen3" };
         
         foreach (var family in toolSupportingFamilies)
         {
