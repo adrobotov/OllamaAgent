@@ -77,7 +77,9 @@
         <Border Grid.Row="0" Background="{DynamicResource SystemAccentColor}" Padding="10">
             <StackPanel Orientation="Horizontal" Spacing="10">
                 <!-- App Logo -->
-                <TextBlock Text="⚡" FontSize="24" VerticalAlignment="Center" />
+                <Image Source="avares://OllamaAgent/Assets/icons/icon-64.png" 
+                       Width="32" Height="32" 
+                       VerticalAlignment="Center" />
                 <TextBlock Text="ИИ Чат" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" />
                 <Separator Background="White" Width="1" Height="20" />
                 <Button Content="⚙ Настройки" 
