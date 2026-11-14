@@ -147,6 +147,35 @@ public partial class ChatViewModel : ObservableObject
                 s.Name.Contains(SessionSearchText, StringComparison.OrdinalIgnoreCase) ||
                 s.Messages.Any(m => m.Content.Contains(SessionSearchText, StringComparison.OrdinalIgnoreCase)));
 
+    /// <summary>
+    /// Grouped sessions by date category
+    /// </summary>
+    public (string Category, IEnumerable<ChatSession> Sessions)[] GroupedSessions
+    {
+        get
+        {
+            var now = DateTime.UtcNow;
+            var today = now.Date;
+            var yesterday = today.AddDays(-1);
+            var weekStart = today.AddDays(-(int)now.DayOfWeek);
+
+            var filtered = FilteredSessions.ToList();
+
+            var todaySessions = filtered.Where(s => s.UpdatedAt.Date == today).ToList();
+            var yesterdaySessions = filtered.Where(s => s.UpdatedAt.Date == yesterday).ToList();
+            var weekSessions = filtered.Where(s => s.UpdatedAt >= weekStart && s.UpdatedAt.Date < today).ToList();
+            var olderSessions = filtered.Where(s => s.UpdatedAt < weekStart).ToList();
+
+            var groups = new List<(string, IEnumerable<ChatSession>)>();
+            if (todaySessions.Count > 0) groups.Add(("Сегодня", todaySessions));
+            if (yesterdaySessions.Count > 0) groups.Add(("Вчера", yesterdaySessions));
+            if (weekSessions.Count > 0) groups.Add(("На этой неделе", weekSessions));
+            if (olderSessions.Count > 0) groups.Add(("Ранее", olderSessions));
+
+            return groups.ToArray();
+        }
+    }
+
     private string SessionsDir => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "sessions");
 
     /// <summary>

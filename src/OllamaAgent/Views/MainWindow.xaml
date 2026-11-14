@@ -48,22 +48,38 @@
                     
                     <!-- Session List -->
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <ItemsControl ItemsSource="{Binding FilteredSessions}">
+                        <StackPanel Spacing="5">
+                            <!-- Grouped Sessions -->
+                            <ItemsControl ItemsSource="{Binding GroupedSessions}">
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="models:ChatSession">
-                                        <Border Padding="10,5" 
-                                                Background="{Binding IsSelected, Converter={StaticResource SessionSelectedConverter}}"
-                                                PointerPressed="SessionItem_Click">
-                                            <StackPanel Spacing="2">
-                                                <TextBlock Text="{Binding Name}" 
-                                                           TextTrimming="CharacterEllipsis"
-                                                           FontSize="13" />
-                                                <TextBlock Text="{Binding UpdatedAt, StringFormat={}{0:dd.MM HH:mm}}" 
-                                                           FontSize="10"
-                                                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
-                                            </StackPanel>
-                                        </Border>
+                                    <DataTemplate>
+                                        <StackPanel Spacing="2">
+                                            <!-- Group Header -->
+                                            <TextBlock Text="{Binding Category}" 
+                                                       FontWeight="SemiBold"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                       Margin="10,5,0,2" />
+                                            <!-- Sessions in Group -->
+                                            <ItemsControl ItemsSource="{Binding Sessions}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="models:ChatSession">
+                                                        <Border Padding="10,5" 
+                                                                Background="{Binding IsSelected, Converter={StaticResource SessionSelectedConverter}}"
+                                                                PointerPressed="SessionItem_Click">
+                                                            <StackPanel Spacing="2">
+                                                                <TextBlock Text="{Binding Name}" 
+                                                                           TextTrimming="CharacterEllipsis"
+                                                                           FontSize="13" />
+                                                                <TextBlock Text="{Binding UpdatedAt, StringFormat={}{0:HH:mm}}" 
+                                                                           FontSize="10"
+                                                                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
