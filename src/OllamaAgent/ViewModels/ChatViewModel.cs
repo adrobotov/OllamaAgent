@@ -380,6 +380,12 @@ public partial class ChatViewModel : ObservableObject
                 else
                 {
                     Console.WriteLine($"📝 No tools (hasTools={hasTools}, supported={ModelSupportsTools(_config.Model)})");
+                    
+                    // Show warning if model claims to support tools but might not
+                    if (hasTools && ModelSupportsTools(_config.Model))
+                    {
+                        StatusText = "⚠️ Модель может не поддерживать инструменты";
+                    }
                 }
 
                 // Stream the response
@@ -552,6 +558,13 @@ public partial class ChatViewModel : ObservableObject
         if (string.IsNullOrEmpty(modelName)) return false;
         
         var nameLower = modelName.ToLower();
+        
+        // Reasoning models DON'T support tool calling
+        var reasoningModels = new[] { "deepseek-r1", "qwq", "r1", "qwq-32b" };
+        foreach (var name in reasoningModels)
+        {
+            if (nameLower.Contains(name)) return false;
+        }
         
         // Models known to support tools
         var toolSupportingFamilies = new[] { "llama", "gemma", "qwen", "mistral", "mixtral", "codellama", "codegemma" };

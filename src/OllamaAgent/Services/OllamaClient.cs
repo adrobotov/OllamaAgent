@@ -119,11 +119,17 @@ public class OllamaClient : IDisposable
         var caps = new List<string>();
         var nameLower = name.ToLower();
         var familyLower = family.ToLower();
+        
+        // Check if this is a reasoning model (these DON'T support tool calling)
+        var isReasoningModel = nameLower.Contains("deepseek-r1") || nameLower.Contains("qwq") || 
+                               nameLower.Contains("r1") || nameLower.Contains("qwq-32b");
 
-        // Tool calling support
-        if (familyLower.Contains("llama") || familyLower.Contains("gemma") || familyLower.Contains("qwen") ||
+        // Tool calling support (only for non-reasoning models)
+        if (!isReasoningModel && (familyLower.Contains("llama") || familyLower.Contains("gemma") || familyLower.Contains("qwen") ||
             nameLower.Contains("llama3.1") || nameLower.Contains("llama3.2") ||
-            nameLower.Contains("gemma2") || nameLower.Contains("qwen2.5"))
+            nameLower.Contains("gemma2") || nameLower.Contains("gemma3") ||
+            nameLower.Contains("qwen2.5") || nameLower.Contains("qwen3") ||
+            nameLower.Contains("mistral-large") || nameLower.Contains("mixtral")))
         {
             caps.Add("🔧 Tool Calling");
         }
