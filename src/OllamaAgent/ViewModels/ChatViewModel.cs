@@ -60,6 +60,20 @@ public partial class ChatViewModel : ObservableObject
     [ObservableProperty]
     private string _weatherApiKey;
 
+    [ObservableProperty]
+    private bool _thinkingEnabled;
+
+    [ObservableProperty]
+    private string _selectedThinkingDepth = "medium";
+
+    private ObservableCollection<string> _thinkingDepthOptions = new(["low", "medium", "high"]);
+
+    public ObservableCollection<string> ThinkingDepthOptions
+    {
+        get => _thinkingDepthOptions;
+        set => SetProperty(ref _thinkingDepthOptions, value);
+    }
+
     private ObservableCollection<string> _modelOptions = new();
 
     public ObservableCollection<string> ModelOptions
@@ -125,6 +139,8 @@ public partial class ChatViewModel : ObservableObject
         BaseUrl = config.BaseUrl;
         SystemPrompt = config.SystemPrompt;
         WeatherApiKey = config.WeatherApiKey;
+        ThinkingEnabled = config.ThinkingEnabled;
+        SelectedThinkingDepth = config.ThinkingDepth;
         
         RegisterTools();
         
@@ -168,6 +184,16 @@ public partial class ChatViewModel : ObservableObject
     partial void OnWeatherApiKeyChanged(string value)
     {
         _config.WeatherApiKey = value;
+    }
+
+    partial void OnThinkingEnabledChanged(bool value)
+    {
+        _config.ThinkingEnabled = value;
+    }
+
+    partial void OnSelectedThinkingDepthChanged(string value)
+    {
+        _config.ThinkingDepth = value;
     }
 
     private void RegisterTools()
@@ -326,6 +352,13 @@ public partial class ChatViewModel : ObservableObject
                     Messages = messages,
                     Stream = true
                 };
+
+                // Add thinking mode if enabled
+                if (_config.ThinkingEnabled)
+                {
+                    request.Think = _config.ThinkingDepth;
+                    Console.WriteLine($"🧠 Thinking mode enabled with depth: {_config.ThinkingDepth}");
+                }
 
                 if (useTools)
                 {

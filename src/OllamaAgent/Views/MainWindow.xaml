@@ -149,6 +149,21 @@
                              Watermark="Инструкции для ИИ..."
                              VerticalContentAlignment="Top" />
 
+                    <!-- Thinking Mode -->
+                    <Grid ColumnDefinitions="Auto, *, Auto">
+                        <TextBlock Grid.Column="0" Text="Режим:" VerticalAlignment="Center" Width="80" />
+                        <CheckBox Grid.Column="1" 
+                                  Content="Режим размышлений (thinking)"
+                                  IsChecked="{Binding ThinkingEnabled}"
+                                  Margin="10,0" />
+                        <ComboBox Grid.Column="2" 
+                                  ItemsSource="{Binding ThinkingDepthOptions}"
+                                  SelectedItem="{Binding SelectedThinkingDepth}"
+                                  Width="120"
+                                  IsEnabled="{Binding ThinkingEnabled}"
+                                  Margin="5,0" />
+                    </Grid>
+
                     <!-- Buttons -->
                     <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,5,0,0">
                         <Button Content="💾 Сохранить" 
