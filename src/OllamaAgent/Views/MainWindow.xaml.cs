@@ -324,6 +324,15 @@ public partial class MainWindow : Window
         }
     }
 
+    private void ClearChatSearch_Click(object? sender, RoutedEventArgs e)
+    {
+        var viewModel = DataContext as ChatViewModel;
+        if (viewModel != null)
+        {
+            viewModel.ChatSearchText = string.Empty;
+        }
+    }
+
     private void ApproveTool_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is Button btn && btn.DataContext is ToolConfirmation confirmation)

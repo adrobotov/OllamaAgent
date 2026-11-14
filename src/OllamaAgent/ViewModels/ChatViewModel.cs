@@ -138,6 +138,12 @@ public partial class ChatViewModel : ObservableObject
     private string _sessionSearchText = string.Empty;
 
     /// <summary>
+    /// Search text for filtering chat messages
+    /// </summary>
+    [ObservableProperty]
+    private string _chatSearchText = string.Empty;
+
+    /// <summary>
     /// Filtered sessions based on search text
     /// </summary>
     public IEnumerable<ChatSession> FilteredSessions =>
@@ -146,6 +152,16 @@ public partial class ChatViewModel : ObservableObject
             : ChatSessions.Where(s =>
                 s.Name.Contains(SessionSearchText, StringComparison.OrdinalIgnoreCase) ||
                 s.Messages.Any(m => m.Content.Contains(SessionSearchText, StringComparison.OrdinalIgnoreCase)));
+
+    /// <summary>
+    /// Filtered chat messages based on search text
+    /// </summary>
+    public IEnumerable<ChatMessageViewModel> FilteredChatMessages =>
+        string.IsNullOrWhiteSpace(ChatSearchText)
+            ? ChatMessages
+            : ChatMessages.Where(m =>
+                m.Content.Contains(ChatSearchText, StringComparison.OrdinalIgnoreCase) ||
+                m.Sender.Contains(ChatSearchText, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Grouped sessions by date category
