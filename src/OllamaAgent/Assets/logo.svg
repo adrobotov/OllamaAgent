@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Background circle -->
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366F1"/>
+      <stop offset="100%" style="stop-color:#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="chatGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF"/>
+      <stop offset="100%" style="stop-color:#F3F4F6"/>
+    </linearGradient>
+    <linearGradient id="boltGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366F1"/>
+      <stop offset="100%" style="stop-color:#4F46E5"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="256" height="256" rx="56" fill="url(#bgGrad)"/>
+  
+  <!-- Chat bubble -->
+  <path d="M76 80 Q76 64 92 64 L164 64 Q180 64 180 80 L180 140 Q180 156 164 156 L120 156 L96 180 L100 156 L92 156 Q76 156 76 140 Z" 
+        fill="url(#chatGrad)" stroke="#E5E7EB" stroke-width="2"/>
+  
+  <!-- Lightning bolt (AI symbol) -->
+  <path d="M136 88 L116 120 L132 120 L120 152 L152 112 L136 112 Z" 
+        fill="url(#boltGrad)"/>
+  
+  <!-- Small decorative dots -->
+  <circle cx="64" cy="72" r="4" fill="#A5B4FC" opacity="0.6"/>
+  <circle cx="192" cy="184" r="6" fill="#A5B4FC" opacity="0.6"/>
+  <circle cx="56" cy="180" r="3" fill="#A5B4FC" opacity="0.4"/>
+</svg>
