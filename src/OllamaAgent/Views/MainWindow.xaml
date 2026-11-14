@@ -246,7 +246,7 @@
                 <Border IsVisible="{Binding ShowTypingIndicator}"
                         Padding="10">
                     <StackPanel Orientation="Horizontal" Spacing="5">
-                        <TextBlock Text="Ассистор печатает..." 
+                        <TextBlock Text="Помощник печатает..." 
                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                    FontSize="12" />
                     </StackPanel>

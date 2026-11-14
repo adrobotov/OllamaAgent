@@ -25,7 +25,7 @@ public class ChatMessageViewModelTests
         // Assert
         Assert.Equal("Hi there!", vm.Content);
         Assert.Equal(ChatMessageViewModel.MessageType.Assistant, vm.Type);
-        Assert.Equal("Ассистор", vm.Sender);
+        Assert.Equal("Помощник", vm.Sender);
     }
 
     [Fact]

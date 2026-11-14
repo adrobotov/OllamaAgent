@@ -68,7 +68,7 @@ public partial class ChatMessageViewModel : ObservableObject
         Sender = type switch
         {
             MessageType.User => "Вы",
-            MessageType.Assistant => "Ассистор",
+            MessageType.Assistant => "Помощник",
             MessageType.ToolResult => "Инструмент",
             MessageType.Error => "Ошибка",
             _ => "Неизвестно"
