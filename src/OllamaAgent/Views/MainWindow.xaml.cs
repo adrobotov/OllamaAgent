@@ -62,6 +62,11 @@ public partial class MainWindow : Window
         {
             // Settings panel visibility is bound, no action needed
         }
+        else if (e.PropertyName == nameof(ChatViewModel.HasPendingConfirmations))
+        {
+            // Auto-scroll when tool confirmations appear/disappear
+            Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(ScrollToBottom, Avalonia.Threading.DispatcherPriority.Background);
+        }
     }
 
     private void OnChatMessagesChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -69,7 +74,8 @@ public partial class MainWindow : Window
         // Auto-scroll on new messages
         if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
         {
-            ScrollToBottom();
+            // Use Dispatcher to ensure UI is updated before scrolling
+            Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(ScrollToBottom, Avalonia.Threading.DispatcherPriority.Background);
         }
     }
 
