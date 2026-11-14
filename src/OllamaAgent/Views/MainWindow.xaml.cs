@@ -8,6 +8,7 @@ using OllamaAgent.ViewModels;
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 
 namespace OllamaAgent.Views;
 
@@ -256,6 +257,44 @@ public partial class MainWindow : Window
         if (viewModel?.ActiveSession != null)
         {
             viewModel.DeleteChatCommand.Execute(viewModel.ActiveSession.Id);
+        }
+    }
+
+    private async void AttachImage_Click(object? sender, RoutedEventArgs e)
+    {
+        var viewModel = DataContext as ChatViewModel;
+        if (viewModel == null) return;
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.StorageProvider != null)
+        {
+            var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Выберите изображения",
+                AllowMultiple = true,
+                FileTypeFilter = new[]
+                {
+                    new FilePickerFileType("Images") { Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp" } },
+                    new FilePickerFileType("All Files") { Patterns = new[] { "*" } }
+                }
+            });
+            
+            if (files.Count > 0)
+            {
+                var filePaths = files.Select(f => f.Path.IsAbsoluteUri 
+                    ? f.Path.LocalPath 
+                    : f.Path.ToString()).ToList();
+                await viewModel.AttachImagesAsync(filePaths);
+            }
+        }
+    }
+
+    private void RemoveImage_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.DataContext is ImagePreviewInfo preview)
+        {
+            var viewModel = DataContext as ChatViewModel;
+            viewModel?.RemoveImage(preview);
         }
     }
 }

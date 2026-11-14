@@ -22,6 +22,10 @@ public class Message
     [JsonPropertyName("tool_calls")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<ToolCall>? ToolCalls { get; set; }
+
+    [JsonPropertyName("images")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<string>? Images { get; set; }
 }
 
 /// <summary>

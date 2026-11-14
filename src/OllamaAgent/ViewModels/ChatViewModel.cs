@@ -90,6 +90,22 @@ public partial class ChatViewModel : ObservableObject
     [ObservableProperty]
     private string _sessionName = "Новый чат";
 
+    /// <summary>
+    /// Whether images are attached to the current message
+    /// </summary>
+    [ObservableProperty]
+    private bool _hasImages;
+
+    /// <summary>
+    /// Preview information for attached images
+    /// </summary>
+    public List<ImagePreviewInfo> ImagePreviews { get; } = new();
+
+    /// <summary>
+    /// Base64-encoded images for the current message
+    /// </summary>
+    private List<string> _attachedImages { get; } = new();
+
     private string SessionsDir => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "sessions");
 
     /// <summary>
@@ -226,7 +242,8 @@ public partial class ChatViewModel : ObservableObject
     [RelayCommand]
     private async Task SendMessageAsync()
     {
-        if (string.IsNullOrWhiteSpace(InputText) || IsProcessing) return;
+        if (string.IsNullOrWhiteSpace(InputText) && _attachedImages.Count == 0) return;
+        if (IsProcessing) return;
 
         var userMessage = InputText.Trim();
         InputText = string.Empty;
@@ -234,18 +251,37 @@ public partial class ChatViewModel : ObservableObject
         // Update session name from first message
         if (ActiveSession != null && ActiveSession.Messages.Count == 0)
         {
-            ActiveSession.Name = userMessage.Length > 50 ? userMessage[..50] + "..." : userMessage;
+            ActiveSession.Name = (userMessage ?? "Изображение").Length > 50 
+                ? (userMessage ?? "Изображение")[..50] + "..." 
+                : (userMessage ?? "Изображение");
             SessionName = ActiveSession.Name;
         }
 
-        // Add user message to UI
-        ChatMessages.Add(new ChatMessageViewModel(userMessage, ChatMessageViewModel.MessageType.User));
+        // Add user message to UI (with image indicator if applicable)
+        var displayText = string.IsNullOrEmpty(userMessage) 
+            ? $"📷 Изображение ({_attachedImages.Count})" 
+            : userMessage;
+        var messageViewModel = new ChatMessageViewModel(displayText, ChatMessageViewModel.MessageType.User)
+        {
+            Images = _attachedImages.Count > 0 ? new List<string>(_attachedImages) : null
+        };
+        ChatMessages.Add(messageViewModel);
         
         // Add to conversation history
-        ConversationHistory.Add(new Message { Role = "user", Content = userMessage });
+        var message = new Message { Role = "user", Content = userMessage };
+        if (_attachedImages.Count > 0)
+        {
+            message.Images = new List<string>(_attachedImages);
+        }
+        ConversationHistory.Add(message);
+
+        // Clear attached images
+        _attachedImages.Clear();
+        ImagePreviews.Clear();
+        HasImages = false;
 
         // Process AI response with tool calling
-        await ProcessAIResponseAsync(userMessage, _sendMessageCancellationToken.Token);
+        await ProcessAIResponseAsync(userMessage ?? string.Empty, _sendMessageCancellationToken.Token);
     }
 
     private CancellationTokenSource _sendMessageCancellationToken = new();
@@ -798,6 +834,50 @@ public partial class ChatViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Attach images to the current message
+    /// </summary>
+    public async Task AttachImagesAsync(List<string> filePaths)
+    {
+        try
+        {
+            foreach (var filePath in filePaths)
+            {
+                if (!File.Exists(filePath)) continue;
+
+                var bytes = await File.ReadAllBytesAsync(filePath);
+                var base64 = Convert.ToBase64String(bytes);
+                _attachedImages.Add(base64);
+
+                var fileName = Path.GetFileName(filePath);
+                var size = bytes.Length;
+                ImagePreviews.Add(new ImagePreviewInfo { Name = fileName, Size = size });
+            }
+
+            HasImages = _attachedImages.Count > 0;
+            StatusText = $"📷 Прикреплено изображений: {_attachedImages.Count}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"❌ Ошибка загрузки изображений: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Remove an attached image
+    /// </summary>
+    public void RemoveImage(ImagePreviewInfo preview)
+    {
+        var index = ImagePreviews.IndexOf(preview);
+        if (index >= 0)
+        {
+            _attachedImages.RemoveAt(index);
+            ImagePreviews.Remove(preview);
+            HasImages = _attachedImages.Count > 0;
+            StatusText = $"📷 Прикреплено изображений: {_attachedImages.Count}";
+        }
+    }
+
+    /// <summary>
     /// Toggle theme
     /// </summary>
     [RelayCommand]
@@ -844,4 +924,13 @@ public partial class ChatViewModel : ObservableObject
         _webClient?.Dispose();
         _weatherClient?.Dispose();
     }
+}
+
+/// <summary>
+/// Preview information for attached images
+/// </summary>
+public class ImagePreviewInfo
+{
+    public string Name { get; set; } = string.Empty;
+    public long Size { get; set; }
 }

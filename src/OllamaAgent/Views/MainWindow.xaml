@@ -230,24 +230,65 @@
         <Border Grid.Row="3" 
                 Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
                 Padding="15">
-            <Grid ColumnDefinitions="*, Auto">
-                <TextBox Grid.Column="0" 
-                         Text="{Binding InputText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         Watermark="Введите сообщение... (Ctrl+Enter для отправки)"
-                         AcceptsReturn="True"
-                         VerticalAlignment="Center"
-                         KeyDown="InputTextBox_KeyDown"
-                         Height="40"
-                         FontSize="14" />
-                <Button Grid.Column="1"
-                        Content="Отправить"
-                        Command="{Binding SendMessageCommand}"
-                        IsEnabled="{Binding !IsProcessing}"
-                        Margin="10,0,0,0"
-                        Width="130"
-                        Height="40"
-                        FontSize="14" />
-            </Grid>
+            <StackPanel Spacing="5">
+                <!-- Image Preview -->
+                <Border IsVisible="{Binding HasImages}"
+                        Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                        BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                        BorderThickness="1">
+                    <Border Padding="10">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Text="📷 Прикреплённые изображения:" VerticalAlignment="Center" />
+                        <ItemsControl ItemsSource="{Binding ImagePreviews}" MaxWidth="300">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="5" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Spacing="2">
+                                        <Border Width="60" Height="60" Background="{DynamicResource SystemControlForegroundBaseMediumBrush}">
+                                            <TextBlock Text="🖼" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24" />
+                                        </Border>
+                                        <TextBlock Text="{Binding Name}" FontSize="9" TextTrimming="CharacterEllipsis" HorizontalAlignment="Center" />
+                                        <Button Content="✕" Width="16" Height="16" Padding="0" Click="RemoveImage_Click" Tag="{Binding}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </Border>
+                
+                <Grid ColumnDefinitions="*, Auto">
+                    <TextBox Grid.Column="0" 
+                             Text="{Binding InputText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             Watermark="Введите сообщение... (Ctrl+Enter для отправки)"
+                             AcceptsReturn="True"
+                             VerticalAlignment="Center"
+                             KeyDown="InputTextBox_KeyDown"
+                             Height="40"
+                             FontSize="14" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5">
+                        <Button Content="📷" 
+                                Click="AttachImage_Click"
+                                Width="40"
+                                Height="40"
+                                Padding="0"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                ToolTip.Tip="Прикрепить изображение" />
+                        <Button Content="Отправить"
+                                Command="{Binding SendMessageCommand}"
+                                IsEnabled="{Binding !IsProcessing}"
+                                Margin="5,0,0,0"
+                                Width="130"
+                                Height="40"
+                                FontSize="14" />
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
         </Border>
 
         <!-- Status Bar -->

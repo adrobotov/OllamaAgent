@@ -54,6 +54,11 @@ public partial class ChatMessageViewModel : ObservableObject
         ? Content[..200] + "..." 
         : Content;
 
+    /// <summary>
+    /// Base64-encoded images attached to user messages
+    /// </summary>
+    public List<string>? Images { get; set; }
+
     public ChatMessageViewModel(string content, MessageType type)
     {
         Content = content;
