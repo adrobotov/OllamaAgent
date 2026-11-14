@@ -716,6 +716,8 @@ public partial class ChatViewModel : ObservableObject
                 BaseUrl = loaded.BaseUrl;
                 SystemPrompt = loaded.SystemPrompt;
                 WeatherApiKey = loaded.WeatherApiKey;
+                ThinkingEnabled = loaded.ThinkingEnabled;
+                SelectedThinkingDepth = loaded.ThinkingDepth;
                 
                 StatusText = $"✅ Конфиг загружен из {path}";
                 
