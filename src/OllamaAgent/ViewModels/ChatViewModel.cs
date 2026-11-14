@@ -179,9 +179,18 @@ public partial class ChatViewModel : ObservableObject
     private string SessionsDir => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "sessions");
 
     /// <summary>
-    /// Path to the auto-saved config file
+    /// Path to the auto-saved config file (same as App.xaml.cs)
     /// </summary>
-    private string ConfigPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
+    private string ConfigPath
+    {
+        get
+        {
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            var configDir = Path.Combine(home, ".ollama-agent");
+            Directory.CreateDirectory(configDir);
+            return Path.Combine(configDir, "config.json");
+        }
+    }
 
     /// <summary>
     /// Exposes config for UI access (e.g., theme toggle)
@@ -1214,6 +1223,9 @@ public partial class ChatViewModel : ObservableObject
 
         // Apply theme to the main window
         ApplyThemeToWindow();
+        
+        // Save config
+        SaveConfigAuto();
     }
 
     private void ApplyThemeToWindow()
