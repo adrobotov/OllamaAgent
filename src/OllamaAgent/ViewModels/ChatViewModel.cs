@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -206,13 +207,15 @@ public partial class ChatViewModel : ObservableObject
         ConversationHistory.Add(new Message { Role = "user", Content = userMessage });
 
         // Process AI response with tool calling
-        await ProcessAIResponseAsync(userMessage);
+        await ProcessAIResponseAsync(userMessage, _sendMessageCancellationToken.Token);
     }
+
+    private CancellationTokenSource _sendMessageCancellationToken = new();
 
     /// <summary>
     /// Process AI response with multi-turn tool calling loop
     /// </summary>
-    private async Task ProcessAIResponseAsync(string userText)
+    private async Task ProcessAIResponseAsync(string userText, CancellationToken cancellationToken = default)
     {
         IsProcessing = true;
         StatusText = "Думаю...";
@@ -240,6 +243,8 @@ public partial class ChatViewModel : ObservableObject
 
             for (var turn = 0; turn < maxTurns; turn++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 var request = new ChatRequest
                 {
                     Model = _config.Model,
@@ -259,7 +264,9 @@ public partial class ChatViewModel : ObservableObject
                 }
 
                 // Stream the response
-                var (fullText, toolCalls) = await StreamResponseAsync(request);
+                var (fullText, toolCalls) = await StreamResponseAsync(request, cancellationToken);
+                
+                cancellationToken.ThrowIfCancellationRequested();
                 
                 Console.WriteLine($"📝 Response text: {fullText?.Length} chars, Tool calls: {toolCalls.Count}");
 
@@ -288,6 +295,8 @@ public partial class ChatViewModel : ObservableObject
                     // Execute each tool call
                     foreach (var toolCall in toolCalls)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        
                         var result = await _toolExecutor.ExecuteAsync(toolCall);
                         
                         // Translate tool name to Russian
@@ -328,6 +337,11 @@ public partial class ChatViewModel : ObservableObject
             }
 
             StatusText = "Готово";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Отменено";
+            ChatMessages.Add(new ChatMessageViewModel("⏹ Запрос отменён", ChatMessageViewModel.MessageType.Error));
         }
         catch (Exception ex)
         {
@@ -405,9 +419,9 @@ public partial class ChatViewModel : ObservableObject
     /// <summary>
     /// Stream response from Ollama and extract text and tool calls
     /// </summary>
-    private async Task<(string? text, List<ToolCall> toolCalls)> StreamResponseAsync(ChatRequest request)
+    private async Task<(string? text, List<ToolCall> toolCalls)> StreamResponseAsync(ChatRequest request, CancellationToken cancellationToken = default)
     {
-        await using var response = await _ollamaClient.ChatStreamAsync(request);
+        await using var response = await _ollamaClient.ChatStreamAsync(request, cancellationToken);
         
         var fullText = string.Empty;
         var toolCalls = new List<ToolCall>();
@@ -416,7 +430,9 @@ public partial class ChatViewModel : ObservableObject
         using var reader = new StreamReader(response);
         while (!reader.EndOfStream)
         {
-            var line = await reader.ReadLineAsync();
+            cancellationToken.ThrowIfCancellationRequested();
+            
+            var line = await reader.ReadLineAsync(cancellationToken);
             if (string.IsNullOrWhiteSpace(line)) continue;
 
             try

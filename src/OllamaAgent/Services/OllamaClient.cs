@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using OllamaAgent.Models;
 
@@ -60,7 +61,7 @@ public class OllamaClient : IDisposable
     /// <summary>
     /// Send streaming chat request
     /// </summary>
-    public async Task<Stream> ChatStreamAsync(ChatRequest request)
+    public async Task<Stream> ChatStreamAsync(ChatRequest request, CancellationToken cancellationToken = default)
     {
         request.Stream = true;
         var json = JsonSerializer.Serialize(request, new JsonSerializerOptions 
@@ -72,21 +73,21 @@ public class OllamaClient : IDisposable
         Console.WriteLine($"[OllamaRequest] {json}");
         var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
-        var response = await _httpClient.PostAsync($"{_baseUrl}/api/chat", content);
+        var response = await _httpClient.PostAsync($"{_baseUrl}/api/chat", content, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            var errorBody = await response.Content.ReadAsStringAsync();
+            var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
             Console.WriteLine($"[OllamaError] {response.StatusCode}: {errorBody}");
             throw new HttpRequestException($"Ollama API error: {response.StatusCode} - {errorBody}");
         }
 
-        return await response.Content.ReadAsStreamAsync();
+        return await response.Content.ReadAsStreamAsync(cancellationToken);
     }
 
     /// <summary>
     /// Send non-streaming chat request
     /// </summary>
-    public async Task<ChatResponse> ChatAsync(ChatRequest request)
+    public async Task<ChatResponse> ChatAsync(ChatRequest request, CancellationToken cancellationToken = default)
     {
         request.Stream = false;
         var json = JsonSerializer.Serialize(request, new JsonSerializerOptions 
@@ -98,15 +99,15 @@ public class OllamaClient : IDisposable
         Console.WriteLine($"[OllamaRequest] {json}");
         var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
-        var response = await _httpClient.PostAsync($"{_baseUrl}/api/chat", content);
+        var response = await _httpClient.PostAsync($"{_baseUrl}/api/chat", content, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            var errorBody = await response.Content.ReadAsStringAsync();
+            var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
             Console.WriteLine($"[OllamaError] {response.StatusCode}: {errorBody}");
             throw new HttpRequestException($"Ollama API error: {response.StatusCode} - {errorBody}");
         }
 
-        var jsonResult = await response.Content.ReadAsStringAsync();
+        var jsonResult = await response.Content.ReadAsStringAsync(cancellationToken);
         return JsonSerializer.Deserialize<ChatResponse>(jsonResult) ?? new ChatResponse();
     }
 

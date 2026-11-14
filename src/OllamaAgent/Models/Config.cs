@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json.Serialization;
 
 namespace OllamaAgent.Models;
@@ -37,4 +38,12 @@ public class Config
     // Tool API keys
     [JsonPropertyName("weather_api_key")]
     public string WeatherApiKey { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Validates if the BaseUrl is a valid HTTP/HTTPS URL
+    /// </summary>
+    [JsonIgnore]
+    public bool IsValidBaseUrl =>
+        Uri.TryCreate(BaseUrl, UriKind.Absolute, out var uri) &&
+        (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 }
