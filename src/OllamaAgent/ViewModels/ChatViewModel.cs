@@ -833,6 +833,72 @@ public partial class ChatViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Export current session to JSON string
+    /// </summary>
+    public string ExportSessionToJson()
+    {
+        if (ActiveSession == null) return string.Empty;
+        return System.Text.Json.JsonSerializer.Serialize(ActiveSession, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+    }
+
+    /// <summary>
+    /// Export current session to Markdown string
+    /// </summary>
+    public string ExportSessionToMarkdown()
+    {
+        if (ActiveSession == null) return string.Empty;
+        
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"# {ActiveSession.Name}\n");
+        sb.AppendLine($"Дата: {ActiveSession.CreatedAt:dd.MM.yyyy HH:mm}\n");
+        sb.AppendLine("---\n");
+        
+        foreach (var msg in ActiveSession.Messages)
+        {
+            var role = msg.Role switch
+            {
+                "user" => "👤 Вы",
+                "assistant" => "🤖 Помощник",
+                "tool" => "🔧 Результат инструмента",
+                _ => msg.Role
+            };
+            sb.AppendLine($"## {role}\n");
+            sb.AppendLine($"{msg.Content}\n");
+            sb.AppendLine("---\n");
+        }
+        
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Import sessions from JSON string
+    /// </summary>
+    public int ImportSessionsFromJson(string json)
+    {
+        try
+        {
+            var sessions = System.Text.Json.JsonSerializer.Deserialize<List<ChatSession>>(json);
+            if (sessions != null)
+            {
+                int imported = 0;
+                foreach (var session in sessions)
+                {
+                    session.Id = Guid.NewGuid().ToString("N");
+                    ChatSessions.Add(session);
+                    imported++;
+                }
+                StatusText = $"✅ Импортировано сессий: {imported}";
+                return imported;
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"❌ Ошибка импорта: {ex.Message}";
+        }
+        return 0;
+    }
+
+    /// <summary>
     /// Clear chat history
     /// </summary>
     [RelayCommand]

@@ -79,6 +79,21 @@
                                 Background="Transparent"
                                 BorderThickness="0"
                                 HorizontalAlignment="Stretch" />
+                        <Button Content="📤 Экспорт JSON" 
+                                Click="ExportJson_Click"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                HorizontalAlignment="Stretch" />
+                        <Button Content="📝 Экспорт Markdown" 
+                                Click="ExportMarkdown_Click"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                HorizontalAlignment="Stretch" />
+                        <Button Content="📥 Импорт JSON" 
+                                Click="ImportJson_Click"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                HorizontalAlignment="Stretch" />
                     </StackPanel>
                 </Border>
             </Grid>

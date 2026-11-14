@@ -352,4 +352,108 @@ public partial class MainWindow : Window
         e.Cancel = true;
         this.Hide();
     }
+
+    private async void ExportJson_Click(object? sender, RoutedEventArgs e)
+    {
+        var viewModel = DataContext as ChatViewModel;
+        if (viewModel == null) return;
+
+        var json = viewModel.ExportSessionToJson();
+        if (string.IsNullOrEmpty(json)) return;
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.StorageProvider != null)
+        {
+            var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Экспорт чата",
+                DefaultExtension = "json",
+                SuggestedFileName = "chat.json",
+                FileTypeChoices = new[]
+                {
+                    new FilePickerFileType("JSON Files") { Patterns = new[] { "*.json" } },
+                    new FilePickerFileType("All Files") { Patterns = new[] { "*" } }
+                }
+            });
+            
+            if (file != null)
+            {
+                File.WriteAllText(file.Path.LocalPath, json);
+                viewModel.SetStatus($"✅ Экспортировано: {file.Path.LocalPath}");
+            }
+        }
+    }
+
+    private async void ExportMarkdown_Click(object? sender, RoutedEventArgs e)
+    {
+        var viewModel = DataContext as ChatViewModel;
+        if (viewModel == null) return;
+
+        var markdown = viewModel.ExportSessionToMarkdown();
+        if (string.IsNullOrEmpty(markdown)) return;
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.StorageProvider != null)
+        {
+            var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Экспорт чата",
+                DefaultExtension = "md",
+                SuggestedFileName = "chat.md",
+                FileTypeChoices = new[]
+                {
+                    new FilePickerFileType("Markdown Files") { Patterns = new[] { "*.md" } },
+                    new FilePickerFileType("All Files") { Patterns = new[] { "*" } }
+                }
+            });
+            
+            if (file != null)
+            {
+                File.WriteAllText(file.Path.LocalPath, markdown);
+                viewModel.SetStatus($"✅ Экспортировано в Markdown: {file.Path.LocalPath}");
+            }
+        }
+    }
+
+    private async void ImportJson_Click(object? sender, RoutedEventArgs e)
+    {
+        var viewModel = DataContext as ChatViewModel;
+        if (viewModel == null) return;
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.StorageProvider != null)
+        {
+            var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Импорт чатов",
+                AllowMultiple = true,
+                FileTypeFilter = new[]
+                {
+                    new FilePickerFileType("JSON Files") { Patterns = new[] { "*.json" } },
+                    new FilePickerFileType("All Files") { Patterns = new[] { "*" } }
+                }
+            });
+            
+            if (files.Count > 0)
+            {
+                int imported = 0;
+                foreach (var file in files)
+                {
+                    try
+                    {
+                        var json = File.ReadAllText(file.Path.LocalPath);
+                        imported += viewModel.ImportSessionsFromJson(json);
+                    }
+                    catch
+                    {
+                        // Skip invalid files
+                    }
+                }
+                if (imported == 0)
+                {
+                    viewModel.SetStatus("⚠️ Не удалось импортировать сессии");
+                }
+            }
+        }
+    }
 }
