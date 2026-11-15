@@ -350,20 +350,13 @@ public partial class ChatViewModel : ObservableObject
             var weatherApiKey = _config.WeatherApiKey;
             try
             {
-                var initialized = await McpWeatherTool.InitializeAsync(weatherApiKey);
-                if (initialized)
-                {
-                    McpWeatherTool.Register(_toolExecutor);
-                    Console.WriteLine("🌤️ MCP weather tool registered successfully");
-                }
-                else
-                {
-                    Console.WriteLine("⚠️ MCP weather tool initialization failed, skipping");
-                }
+                await McpWeatherTool.InitializeAsync(weatherApiKey);
+                McpWeatherTool.Register(_toolExecutor);
+                Console.WriteLine("🌤️ Weather tool registered successfully");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ MCP weather tool init error: {ex.Message}");
+                Console.WriteLine($"❌ Weather tool init error: {ex.Message}");
             }
         }
 
@@ -406,20 +399,13 @@ public partial class ChatViewModel : ObservableObject
         {
             try
             {
-                var initialized = await McpWeatherTool.InitializeAsync(_config.WeatherApiKey);
-                if (initialized)
-                {
-                    McpWeatherTool.Register(_toolExecutor);
-                    Console.WriteLine("🌤️ MCP weather tool registered successfully");
-                }
-                else
-                {
-                    Console.WriteLine("⚠️ MCP weather tool initialization failed, skipping");
-                }
+                await McpWeatherTool.InitializeAsync(_config.WeatherApiKey);
+                McpWeatherTool.Register(_toolExecutor);
+                Console.WriteLine("🌤️ Weather tool registered successfully");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ MCP weather tool init error: {ex.Message}");
+                Console.WriteLine($"❌ Weather tool init error: {ex.Message}");
             }
         }
 

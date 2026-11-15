@@ -30,9 +30,12 @@ public class McpClient : IDisposable
     {
         if (_disposed) throw new ObjectDisposedException(nameof(McpClient));
 
+        // Resolve full path for Windows (npx, npm, etc.)
+        var resolvedCommand = ResolveCommand(command);
+
         var psi = new ProcessStartInfo
         {
-            FileName = command,
+            FileName = resolvedCommand,
             Arguments = string.Join(" ", args),
             UseShellExecute = false,
             RedirectStandardInput = true,
@@ -284,6 +287,60 @@ public class McpClient : IDisposable
         }
 
         _process?.Dispose();
+    }
+
+    /// <summary>
+    /// Resolve command path on Windows (finds npx.exe, node.exe, etc.)
+    /// </summary>
+    private static string ResolveCommand(string command)
+    {
+        // If it's already an absolute path, return as-is
+        if (Path.IsPathRooted(command) && File.Exists(command))
+            return command;
+
+        // Try to find in common Windows locations
+        var searchPaths = new[]
+        {
+            Environment.GetEnvironmentVariable("APPDATA"),       // %APPDATA%
+            Environment.GetEnvironmentVariable("LOCALAPPDATA"),  // %LOCALAPPDATA%
+            Environment.GetEnvironmentVariable("ProgramFiles"),  // %ProgramFiles%
+            Environment.GetEnvironmentVariable("ProgramFiles(x86)"),
+            Path.Combine(Environment.GetEnvironmentVariable("SystemDrive") ?? "C:", "Users", Environment.UserName, "AppData", "Local", "Programs", "Ollama"),
+        };
+
+        foreach (var dir in searchPaths)
+        {
+            if (string.IsNullOrEmpty(dir)) continue;
+            var fullPath = Path.Combine(dir, command + ".exe");
+            if (File.Exists(fullPath))
+                return fullPath;
+        }
+
+        // Try whereami (PowerShell style)
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "where",
+                Arguments = command + ".exe",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+            using var proc = Process.Start(psi);
+            proc?.WaitForExit();
+            var output = proc?.StandardOutput.ReadToEnd()?.Trim();
+            if (!string.IsNullOrEmpty(output) && File.Exists(output))
+                return output;
+        }
+        catch
+        {
+            // Ignore
+        }
+
+        // Fallback to original command
+        return command;
     }
 }
 
