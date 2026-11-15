@@ -39,9 +39,6 @@ public class Config
     [JsonPropertyName("weather_api_key")]
     public string WeatherApiKey { get; set; } = string.Empty;
 
-    [JsonPropertyName("brave_search_api_key")]
-    public string BraveSearchApiKey { get; set; } = string.Empty;
-
     // Database connection strings
     [JsonPropertyName("db_postgres")]
     public string DbPostgres { get; set; } = string.Empty;
@@ -58,6 +55,13 @@ public class Config
 
     [JsonPropertyName("thinking_depth")]
     public string ThinkingDepth { get; set; } = "medium";
+
+    // Auto-update settings
+    [JsonPropertyName("auto_update_enabled")]
+    public bool AutoUpdateEnabled { get; set; } = true;
+
+    [JsonPropertyName("last_update_check")]
+    public string? LastUpdateCheck { get; set; }
 
     /// <summary>
     /// Validates if the BaseUrl is a valid HTTP/HTTPS URL

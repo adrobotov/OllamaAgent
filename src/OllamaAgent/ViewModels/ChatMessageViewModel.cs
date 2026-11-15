@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
-using OllamaAgent.Helpers;
 
 namespace OllamaAgent.ViewModels;
 
@@ -41,11 +40,6 @@ public partial class ChatMessageViewModel : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _isCollapsed;
-
-    /// <summary>
-    /// Rendered Markdown segments for rich display
-    /// </summary>
-    public List<MarkdownRenderer.TextSegment> MarkdownSegments { get; }
 
     /// <summary>
     /// Truncated preview for collapsed state
@@ -93,10 +87,6 @@ public partial class ChatMessageViewModel : ObservableObject
             _ => Avalonia.Media.Brushes.Black
         };
 
-        // Render Markdown for assistant messages
-        MarkdownSegments = type == MessageType.Assistant 
-            ? MarkdownRenderer.Render(content) 
-            : new List<MarkdownRenderer.TextSegment> { new() { Text = content, IsBold = false, IsItalic = false, IsCode = false } };
     }
 
     /// <summary>
@@ -108,14 +98,10 @@ public partial class ChatMessageViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Update content and re-render Markdown
+    /// Update content
     /// </summary>
     public void UpdateContent(string newContent)
     {
         Content = newContent;
-        MarkdownSegments.Clear();
-        MarkdownSegments.AddRange(_type == MessageType.Assistant 
-            ? MarkdownRenderer.Render(newContent) 
-            : new List<MarkdownRenderer.TextSegment> { new() { Text = newContent, IsBold = false, IsItalic = false, IsCode = false } });
     }
 }

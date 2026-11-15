@@ -12,6 +12,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using OllamaAgent.Helpers;
 using OllamaAgent.Models;
 using OllamaAgent.Services;
 using OllamaAgent.Tools;
@@ -21,13 +22,49 @@ namespace OllamaAgent.ViewModels;
 /// <summary>
 /// Main chat view model with tool calling support
 /// </summary>
-public partial class ChatViewModel : ObservableObject
+public partial class ChatViewModel : ObservableObject, IDisposable
 {
     private OllamaClient _ollamaClient;
     private ToolExecutor _toolExecutor;
     private Config _config;
     private readonly string _rootDir;
     private WebClient? _webClient;
+    private readonly ILogger _logger;
+
+    // Constructor
+    public ChatViewModel(Config config) : this(config, new ConsoleLogger()) { }
+
+    internal ChatViewModel(Config config, ILogger logger)
+    {
+        _config = config;
+        _rootDir = Directory.GetCurrentDirectory();
+        _logger = logger;
+        
+        _ollamaClient = new OllamaClient(config.BaseUrl);
+        _toolExecutor = new ToolExecutor();
+        
+        // Initialize UI properties from config
+        BaseUrl = config.BaseUrl;
+        SystemPrompt = config.SystemPrompt;
+        WeatherApiKey = config.WeatherApiKey;
+        ThinkingEnabled = config.ThinkingEnabled;
+        SelectedThinkingDepth = config.ThinkingDepth;
+        
+        RegisterSyncTools();
+        
+        // Set initial model
+        if (!string.IsNullOrEmpty(config.Model))
+        {
+            SelectedModelDisplay = config.Model;
+        }
+        
+        // Load all sessions
+        LoadAllSessions();
+        
+        // Create initial session
+        ActiveSession = new ChatSession { Name = "Новый чат", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        ChatSessions.Add(ActiveSession!);
+    }
 
     [ObservableProperty]
     private string _inputText = string.Empty;
@@ -143,24 +180,24 @@ public partial class ChatViewModel : ObservableObject
     private string _chatSearchText = string.Empty;
 
     /// <summary>
-    /// Filtered sessions based on search text
+    /// Filtered sessions based on search text (uses fuzzy matching)
     /// </summary>
     public IEnumerable<ChatSession> FilteredSessions =>
         string.IsNullOrWhiteSpace(SessionSearchText)
             ? ChatSessions
             : ChatSessions.Where(s =>
-                s.Name.Contains(SessionSearchText, StringComparison.OrdinalIgnoreCase) ||
-                s.Messages.Any(m => m.Content.Contains(SessionSearchText, StringComparison.OrdinalIgnoreCase)));
+                FuzzySearch.Contains(s.Name, SessionSearchText) ||
+                s.Messages.Any(m => FuzzySearch.Contains(m.Content, SessionSearchText)));
 
     /// <summary>
-    /// Filtered chat messages based on search text
+    /// Filtered chat messages based on search text (uses fuzzy matching)
     /// </summary>
     public IEnumerable<ChatMessageViewModel> FilteredChatMessages =>
         string.IsNullOrWhiteSpace(ChatSearchText)
             ? ChatMessages
             : ChatMessages.Where(m =>
-                m.Content.Contains(ChatSearchText, StringComparison.OrdinalIgnoreCase) ||
-                m.Sender.Contains(ChatSearchText, StringComparison.OrdinalIgnoreCase));
+                FuzzySearch.Contains(m.Content, ChatSearchText) ||
+                FuzzySearch.Contains(m.Sender, ChatSearchText));
 
     /// <summary>
     /// Grouped sessions by date category
@@ -206,57 +243,17 @@ public partial class ChatViewModel : ObservableObject
         }
     }
 
-    private string SessionsDir => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "sessions");
+    private string SessionsDir => ConfigPaths.SessionsDir;
 
     /// <summary>
-    /// Path to the auto-saved config file (same as App.xaml.cs)
+    /// Path to the auto-saved config file
     /// </summary>
-    private string ConfigPath
-    {
-        get
-        {
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var configDir = Path.Combine(home, ".ollama-agent");
-            Directory.CreateDirectory(configDir);
-            return Path.Combine(configDir, "config.json");
-        }
-    }
+    private string ConfigPath => ConfigPaths.ConfigFile;
 
     /// <summary>
     /// Exposes config for UI access (e.g., theme toggle)
     /// </summary>
     public Config Config => _config;
-
-    public ChatViewModel(Config config)
-    {
-        _config = config;
-        _rootDir = Directory.GetCurrentDirectory();
-        
-        _ollamaClient = new OllamaClient(config.BaseUrl);
-        _toolExecutor = new ToolExecutor();
-        
-        // Initialize UI properties from config
-        BaseUrl = config.BaseUrl;
-        SystemPrompt = config.SystemPrompt;
-        WeatherApiKey = config.WeatherApiKey;
-        ThinkingEnabled = config.ThinkingEnabled;
-        SelectedThinkingDepth = config.ThinkingDepth;
-        
-        RegisterSyncTools();
-        
-        // Set initial model
-        if (!string.IsNullOrEmpty(config.Model))
-        {
-            SelectedModelDisplay = config.Model;
-        }
-        
-        // Load all sessions
-        LoadAllSessions();
-        
-        // Create initial session
-        ActiveSession = new ChatSession { Name = "Новый чат", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
-        ChatSessions.Add(ActiveSession!);
-    }
 
     // Update config when properties change
     partial void OnBaseUrlChanged(string value)
@@ -439,24 +436,6 @@ public partial class ChatViewModel : ObservableObject
             Console.WriteLine($"❌ Memory MCP init error: {ex.Message}");
         }
 
-        // Brave Search MCP (only if API key is configured)
-        if (!string.IsNullOrEmpty(_config.BraveSearchApiKey))
-        {
-            try
-            {
-                var searchInit = await McpSearchTool.InitializeAsync(_config.BraveSearchApiKey);
-                if (searchInit)
-                {
-                    McpSearchTool.Register(_toolExecutor);
-                    Console.WriteLine("🔍 Brave Search MCP registered successfully");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Brave Search MCP init error: {ex.Message}");
-            }
-        }
-
         // Database MCP (if any connection string is configured)
         var dbConnections = new Dictionary<string, string>();
         if (!string.IsNullOrEmpty(_config.DbPostgres))
@@ -591,65 +570,20 @@ public partial class ChatViewModel : ObservableObject
 
         try
         {
-            // Build messages with system prompt
-            var messages = new List<Message>();
-            
-            // System prompt
-            if (!string.IsNullOrEmpty(_config.SystemPrompt))
-            {
-                messages.Add(new Message { Role = "system", Content = _config.SystemPrompt });
-            }
-
-            // Conversation history with sliding window
-            var history = ConversationHistory.Count > _config.ContextLimit
-                ? ConversationHistory.Skip(ConversationHistory.Count - _config.ContextLimit)
-                : ConversationHistory;
-            messages.AddRange(history);
-
-            var hasTools = _toolExecutor.GetTools().Count > 0;
-            var useTools = hasTools && ModelSupportsTools(_config.Model);
+            var messages = BuildMessageList();
+            var useTools = ShouldUseTools();
             var maxTurns = 10;
 
             for (var turn = 0; turn < maxTurns; turn++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var request = new ChatRequest
-                {
-                    Model = _config.Model,
-                    Messages = messages,
-                    Stream = true
-                };
-
-                // Add thinking mode if enabled AND supported by model
-                if (_config.ThinkingEnabled && ModelSupportsThinking(_config.Model))
-                {
-                    request.Think = _config.ThinkingDepth;
-                    Console.WriteLine($"🧠 Thinking mode enabled with depth: {_config.ThinkingDepth}");
-                }
-                else if (_config.ThinkingEnabled && !ModelSupportsThinking(_config.Model))
-                {
-                    Console.WriteLine($"⚠️ Thinking not supported by model: {_config.Model}");
-                    StatusText = "⚠️ Thinking не поддерживается этой моделью";
-                }
-
-                if (useTools)
-                {
-                    request.Tools = _toolExecutor.GetTools().Select(t => (object)t).ToList();
-                    var toolNames = _toolExecutor.GetTools().Select(t => t.Function.Name).ToList();
-                    Console.WriteLine($"🔧 Sending {toolNames.Count} tools: [{string.Join(", ", toolNames)}]");
-                }
-                else
-                {
-                    Console.WriteLine($"📝 No tools (hasTools={hasTools}, supported={ModelSupportsTools(_config.Model)}, model={_config.Model})");
-                }
-
-                // Stream the response
+                var request = BuildChatRequest(messages, useTools);
                 var (fullText, toolCalls) = await StreamResponseAsync(request, cancellationToken);
                 
                 cancellationToken.ThrowIfCancellationRequested();
                 
-                Console.WriteLine($"📝 Response text: {fullText?.Length} chars, Tool calls: {toolCalls.Count}");
+                _logger.Log($"Response: {fullText?.Length ?? 0} chars, {toolCalls.Count} tool calls");
 
                 // Display AI response
                 if (!string.IsNullOrEmpty(fullText))
@@ -657,108 +591,25 @@ public partial class ChatViewModel : ObservableObject
                     ChatMessages.Add(new ChatMessageViewModel(fullText, ChatMessageViewModel.MessageType.Assistant));
                 }
 
-                // If there are tool calls, execute them and continue
+                // Execute tool calls if any
                 if (toolCalls.Count > 0)
                 {
                     StatusText = "Проверяю инструменты...";
-
-                    // Add assistant message with tool calls to history
-                    messages.Add(new Message
-                    {
-                        Role = "assistant",
-                        Content = fullText ?? string.Empty,
-                        ToolCalls = toolCalls
-                    });
-
-                    // Collect all tool results into a single message
-                    var toolResults = new List<string>();
-                    
-                    // Execute each tool call
-                    foreach (var toolCall in toolCalls)
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        
-                        // Translate tool name to Russian
-                        var toolNameRu = TranslateToolName(toolCall.Function.Name);
-                        
-                        // Show confirmation request for sensitive operations
-                        var needsConfirmation = IsSensitiveTool(toolCall.Function.Name);
-                        if (needsConfirmation)
-                        {
-                            var confirmation = new ToolConfirmation
-                            {
-                                ToolName = toolCall.Function.Name,
-                                ToolNameRu = toolNameRu,
-                                Arguments = System.Text.Json.JsonSerializer.Serialize(toolCall.Function.Arguments)
-                            };
-                            AddToolConfirmation(confirmation);
-                            
-                            // Wait for user confirmation asynchronously
-                            try
-                            {
-                                await confirmation.CompletionSource.Task.WaitAsync(cancellationToken);
-                            }
-                            catch
-                            {
-                                // Cancellation or timeout - treat as rejected
-                                confirmation.IsRejected = true;
-                            }
-                            
-                            PendingConfirmations.Remove(confirmation);
-                            HasPendingConfirmations = PendingConfirmations.Count > 0;
-                            
-                            if (confirmation.IsRejected)
-                            {
-                                toolResults.Add($"*❌ Инструмент отклонён пользователем: `{toolNameRu}`*");
-                                messages.Add(new Message
-                                {
-                                    Role = "tool",
-                                    Content = "Отклонено пользователем",
-                                    ToolName = toolCall.Function.Name
-                                });
-                                continue;
-                            }
-                        }
-                        
-                        var result = await _toolExecutor.ExecuteAsync(toolCall);
-                        
-                        // Add to results collection
-                        var status = result.IsError ? "❌" : "✅";
-                        toolResults.Add($"*{status} Инструмент: `{toolNameRu}`*\n\n`{result.Content}`");
-
-                        // Add tool result to messages
-                        messages.Add(new Message
-                        {
-                            Role = "tool",
-                            Content = result.Content,
-                            ToolName = toolCall.Function.Name
-                        });
-                    }
-
-                    // Display all tool results as a single message
-                    var combinedToolMessage = string.Join("\n\n---\n\n", toolResults);
-                    ChatMessages.Add(new ChatMessageViewModel(combinedToolMessage, ChatMessageViewModel.MessageType.ToolResult));
-
+                    await ExecuteToolCallsAsync(toolCalls, messages, cancellationToken);
                     StatusText = "Думаю...";
-                    continue; // Continue the loop
+                    continue;
                 }
 
-                // No tool calls - final response
+                // Final response
                 if (!string.IsNullOrEmpty(fullText))
                 {
-                    ConversationHistory.Add(new Message
-                    {
-                        Role = "assistant",
-                        Content = fullText
-                    });
+                    ConversationHistory.Add(new Message { Role = "assistant", Content = fullText });
                 }
 
                 break;
             }
 
             StatusText = "Готово";
-            
-            // Save session after successful response
             SaveCurrentSession();
         }
         catch (OperationCanceledException)
@@ -768,6 +619,7 @@ public partial class ChatViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            _logger.LogError($"Error processing response: {ex.Message}");
             StatusText = $"Ошибка: {ex.Message}";
             ChatMessages.Add(new ChatMessageViewModel($"❌ Ошибка: {ex.Message}", ChatMessageViewModel.MessageType.Error));
         }
@@ -776,6 +628,146 @@ public partial class ChatViewModel : ObservableObject
             ShowTypingIndicator = false;
             IsProcessing = false;
         }
+    }
+
+    /// <summary>
+    /// Build the message list with system prompt and history
+    /// </summary>
+    private List<Message> BuildMessageList()
+    {
+        var messages = new List<Message>();
+        
+        if (!string.IsNullOrEmpty(_config.SystemPrompt))
+        {
+            messages.Add(new Message { Role = "system", Content = _config.SystemPrompt });
+        }
+
+        var history = ConversationHistory.Count > _config.ContextLimit
+            ? ConversationHistory.Skip(ConversationHistory.Count - _config.ContextLimit)
+            : ConversationHistory;
+        messages.AddRange(history);
+
+        return messages;
+    }
+
+    /// <summary>
+    /// Determine whether to use tools for the current model
+    /// </summary>
+    private bool ShouldUseTools()
+    {
+        return _toolExecutor.GetTools().Count > 0 && ModelSupportsTools(_config.Model);
+    }
+
+    /// <summary>
+    /// Build a chat request for the current turn
+    /// </summary>
+    private ChatRequest BuildChatRequest(List<Message> messages, bool useTools)
+    {
+        var request = new ChatRequest
+        {
+            Model = _config.Model,
+            Messages = messages,
+            Stream = true
+        };
+
+        // Thinking mode
+        if (_config.ThinkingEnabled && ModelSupportsThinking(_config.Model))
+        {
+            request.Think = _config.ThinkingDepth;
+            _logger.Log($"Thinking mode enabled: {_config.ThinkingDepth}");
+        }
+        else if (_config.ThinkingEnabled && !ModelSupportsThinking(_config.Model))
+        {
+            _logger.Log($"Thinking not supported by: {_config.Model}");
+            StatusText = "⚠️ Thinking не поддерживается этой моделью";
+        }
+
+        // Tools
+        if (useTools)
+        {
+            request.Tools = _toolExecutor.GetTools().Select(t => (object)t).ToList();
+            var toolNames = _toolExecutor.GetTools().Select(t => t.Function.Name).ToList();
+            _logger.Log($"Sending {toolNames.Count} tools: [{string.Join(", ", toolNames)}]");
+        }
+
+        return request;
+    }
+
+    /// <summary>
+    /// Execute tool calls and collect results
+    /// </summary>
+    private async Task ExecuteToolCallsAsync(List<ToolCall> toolCalls, List<Message> messages, CancellationToken cancellationToken)
+    {
+        messages.Add(new Message
+        {
+            Role = "assistant",
+            Content = string.Empty,
+            ToolCalls = toolCalls
+        });
+
+        var toolResults = new List<string>();
+        
+        foreach (var toolCall in toolCalls)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            
+            var toolNameRu = TranslateToolName(toolCall.Function.Name);
+            var needsConfirmation = IsSensitiveTool(toolCall.Function.Name);
+            
+            if (needsConfirmation)
+            {
+                var confirmed = await RequestToolConfirmationAsync(toolCall, toolNameRu, cancellationToken);
+                if (!confirmed) continue;
+            }
+            
+            var result = await _toolExecutor.ExecuteAsync(toolCall);
+            
+            var status = result.IsError ? "❌" : "✅";
+            toolResults.Add($"*{status} Инструмент: `{toolNameRu}`*\n\n`{result.Content}`");
+
+            messages.Add(new Message
+            {
+                Role = "tool",
+                Content = result.Content,
+                ToolName = toolCall.Function.Name
+            });
+        }
+
+        var combinedToolMessage = string.Join("\n\n---\n\n", toolResults);
+        ChatMessages.Add(new ChatMessageViewModel(combinedToolMessage, ChatMessageViewModel.MessageType.ToolResult));
+    }
+
+    /// <summary>
+    /// Request user confirmation for a sensitive tool execution
+    /// </summary>
+    private async Task<bool> RequestToolConfirmationAsync(ToolCall toolCall, string toolNameRu, CancellationToken cancellationToken)
+    {
+        var confirmation = new ToolConfirmation
+        {
+            ToolName = toolCall.Function.Name,
+            ToolNameRu = toolNameRu,
+            Arguments = System.Text.Json.JsonSerializer.Serialize(toolCall.Function.Arguments)
+        };
+        AddToolConfirmation(confirmation);
+        
+        try
+        {
+            await confirmation.CompletionSource.Task.WaitAsync(cancellationToken);
+        }
+        catch
+        {
+            confirmation.IsRejected = true;
+        }
+        
+        PendingConfirmations.Remove(confirmation);
+        HasPendingConfirmations = PendingConfirmations.Count > 0;
+        
+        if (confirmation.IsRejected)
+        {
+            return false;
+        }
+        
+        return true;
     }
 
     /// <summary>
@@ -1409,8 +1401,8 @@ public partial class ChatViewModel : ObservableObject
         _webClient?.Dispose();
         McpWeatherTool.Dispose();
         McpMemoryTool.Dispose();
-        McpSearchTool.Dispose();
         McpDatabaseTool.Dispose();
+        _logger?.Log("ChatViewModel disposed");
     }
 }
 

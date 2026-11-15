@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using OllamaAgent.Models;
@@ -30,6 +31,12 @@ public partial class MainWindow : Window
     {
         base.OnAttachedToVisualTree(e);
         
+        // Defer FindControl until name scope is ready
+        Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(InitializeControls, Avalonia.Threading.DispatcherPriority.Background);
+    }
+
+    private void InitializeControls()
+    {
         // Find the chat ScrollViewer
         _chatScrollViewer = this.FindControl<ScrollViewer>("ChatScrollViewer");
         
@@ -174,13 +181,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private string GetConfigPath()
-    {
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var configDir = Path.Combine(home, ".ollama-agent");
-        Directory.CreateDirectory(configDir);
-        return Path.Combine(configDir, "config.json");
-    }
+    private string GetConfigPath() => ConfigPaths.ConfigFile;
 
     private void ThemeToggleBtn_Click(object? sender, RoutedEventArgs e)
     {
@@ -227,28 +228,77 @@ public partial class MainWindow : Window
         // Handle both button and menu item clicks
         if (sender is Button btn)
         {
-            vm = btn.Tag as ChatMessageViewModel;
+            vm = btn.DataContext as ChatMessageViewModel;
         }
         else if (sender is MenuItem menuItem && menuItem.DataContext is ChatMessageViewModel menuVm)
         {
             vm = menuVm;
         }
         
-        if (vm != null)
+        if (vm != null && !string.IsNullOrEmpty(vm.Content))
         {
-            // Copy to clipboard using Avalonia's clipboard
-            var topLevel = TopLevel.GetTopLevel(this);
-            if (topLevel?.Clipboard != null)
+            // Copy to clipboard using Windows API (reliable on Windows)
+            try
             {
-                _ = topLevel.Clipboard.SetTextAsync(vm.Content);
+                CopyToClipboard(vm.Content);
+            }
+            catch
+            {
+                // Ignore clipboard errors
             }
             
             // Update status
-            Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
             {
                 var viewModel = DataContext as ChatViewModel;
                 viewModel?.SetStatus("✅ Скопировано");
             });
+        }
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool OpenClipboard(System.IntPtr hWndNewOwner);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool EmptyClipboard();
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern System.IntPtr SetClipboardData(uint uFormat, System.IntPtr pwkText);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool CloseClipboard();
+
+    private const uint CF_UNICODETEXT = 13;
+
+    private static void CopyToClipboard(string text)
+    {
+        if (!OpenClipboard(System.IntPtr.Zero))
+            return;
+
+        try
+        {
+            EmptyClipboard();
+            var bytes = System.Text.Encoding.Unicode.GetBytes(text + "\0");
+            var size = bytes.Length;
+            var hglobal = System.Runtime.InteropServices.Marshal.AllocHGlobal(size);
+            
+            try
+            {
+                System.Runtime.InteropServices.Marshal.Copy(bytes, 0, hglobal, size);
+                SetClipboardData(CF_UNICODETEXT, hglobal);
+                // Don't free hglobal - Windows owns it now
+                hglobal = System.IntPtr.Zero;
+            }
+            finally
+            {
+                if (hglobal != System.IntPtr.Zero)
+                    System.Runtime.InteropServices.Marshal.FreeHGlobal(hglobal);
+            }
+        }
+        finally
+        {
+            CloseClipboard();
         }
     }
 
@@ -355,11 +405,16 @@ public partial class MainWindow : Window
         }
     }
 
+    private bool _isIntentionalClose;
+
     private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
-        // Hide window instead of closing (minimize to tray)
-        e.Cancel = true;
-        this.Hide();
+        // Only hide if not an intentional close (via CloseWindow_Click)
+        if (!_isIntentionalClose)
+        {
+            e.Cancel = true;
+            this.Hide();
+        }
     }
 
     /// <summary>
@@ -375,6 +430,8 @@ public partial class MainWindow : Window
     /// </summary>
     private void CloseWindow_Click(object? sender, RoutedEventArgs e)
     {
+        _isIntentionalClose = true;
+        
         // Dispose ViewModel resources
         if (DataContext is ChatViewModel vm)
         {

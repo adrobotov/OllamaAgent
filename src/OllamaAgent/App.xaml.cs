@@ -5,6 +5,8 @@ using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
+using Markdig;
+using MarkView.Avalonia;
 using System;
 using System.IO;
 using System.Linq;
@@ -28,6 +30,15 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        // Enable LaTeX math rendering for all MarkdownViewer controls
+        MarkdownViewerDefaults.Extensions.AddMath();
+        MarkdownViewerDefaults.Pipeline = new MarkdownPipelineBuilder()
+            .UseGitHubExtensions()
+            .UseMathematics()            // $…$ and $$…$$
+            .UseMathBracketDelimiters()  // \(…\) and \[…\]
+            .UseThinkingBlocks()
+            .Build();
+
         // Bind ViewModel to View
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -85,7 +96,7 @@ public partial class App : Application
 
     private Config LoadConfig()
     {
-        var configPath = GetConfigPath();
+        var configPath = ConfigPaths.ConfigFile;
         
         if (File.Exists(configPath))
         {
@@ -103,15 +114,8 @@ public partial class App : Application
 
         return new Config
         {
-            ChatFile = Path.Combine(Path.GetDirectoryName(configPath) ?? ".", "chat.json")
+            ChatFile = Path.Combine(ConfigPaths.ConfigDir, "chat.json")
         };
-    }
-
-    private string GetConfigPath()
-    {
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var configDir = Path.Combine(home, ".ollama-agent");
-        return Path.Combine(configDir, "config.json");
     }
 
     private void DisableAvaloniaDataAnnotationValidation()

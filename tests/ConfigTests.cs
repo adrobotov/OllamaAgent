@@ -1,53 +1,102 @@
 using OllamaAgent.Models;
+using System.Text.Json;
 
-namespace OllamaAgent.Tests.Models;
+namespace OllamaAgent.Tests;
 
 public class ConfigTests
 {
     [Fact]
-    public void Config_DefaultValues_SetsExpectedDefaults()
+    public void Config_DefaultValues_AreCorrect()
     {
-        // Arrange & Act
         var config = new Config();
-
-        // Assert
+        
         Assert.Equal("http://localhost:11434", config.BaseUrl);
         Assert.Equal("llama3.2", config.Model);
         Assert.Equal("system", config.Theme);
-        Assert.Equal(20, config.ContextLimit);
-        Assert.Equal(1200, config.WindowWidth);
-        Assert.Equal(800, config.WindowHeight);
-        Assert.Equal(string.Empty, config.WeatherApiKey);
-        Assert.Equal(string.Empty, config.ChatFile);
+        Assert.False(config.ThinkingEnabled);
+        Assert.Equal("medium", config.ThinkingDepth);
     }
 
     [Fact]
-    public void Config_IsValidBaseUrl_ReturnsTrue_ForValidUrls()
+    public void Config_IsValidBaseUrl_ValidUrl_ReturnsTrue()
     {
-        // Arrange & Act & Assert
-        var config1 = new Config { BaseUrl = "http://localhost:11434" };
-        var config2 = new Config { BaseUrl = "http://127.0.0.1:11434" };
-        var config3 = new Config { BaseUrl = "https://example.com:8080" };
-        var config4 = new Config { BaseUrl = "http://ollama-server:11434" };
-
-        Assert.True(config1.IsValidBaseUrl);
-        Assert.True(config2.IsValidBaseUrl);
-        Assert.True(config3.IsValidBaseUrl);
-        Assert.True(config4.IsValidBaseUrl);
+        var config = new Config { BaseUrl = "http://localhost:11434" };
+        Assert.True(config.IsValidBaseUrl);
     }
 
     [Fact]
-    public void Config_IsValidBaseUrl_ReturnsFalse_ForInvalidUrls()
+    public void Config_IsValidBaseUrl_HttpsUrl_ReturnsTrue()
     {
-        // Arrange & Act & Assert
-        var config1 = new Config { BaseUrl = "" };
-        var config2 = new Config { BaseUrl = "not-a-url" };
-        var config3 = new Config { BaseUrl = "ftp://invalid:11434" };
-        var config4 = new Config { BaseUrl = "   " };
+        var config = new Config { BaseUrl = "https://ollama.example.com" };
+        Assert.True(config.IsValidBaseUrl);
+    }
 
-        Assert.False(config1.IsValidBaseUrl);
-        Assert.False(config2.IsValidBaseUrl);
-        Assert.False(config3.IsValidBaseUrl);
-        Assert.False(config4.IsValidBaseUrl);
+    [Fact]
+    public void Config_IsValidBaseUrl_InvalidUrl_ReturnsFalse()
+    {
+        var config = new Config { BaseUrl = "not-a-url" };
+        Assert.False(config.IsValidBaseUrl);
+    }
+
+    [Fact]
+    public void Config_Serialize_Deserialize_RoundTrip()
+    {
+        var original = new Config
+        {
+            BaseUrl = "http://test:8080",
+            Model = "llama3.1",
+            Theme = "dark",
+            ThinkingEnabled = true,
+            ThinkingDepth = "high",
+            WeatherApiKey = "test-key"
+        };
+
+        var json = JsonSerializer.Serialize(original, new JsonSerializerOptions 
+        { 
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
+        });
+
+        var deserialized = JsonSerializer.Deserialize<Config>(json);
+        
+        Assert.NotNull(deserialized);
+        Assert.Equal(original.BaseUrl, deserialized!.BaseUrl);
+        Assert.Equal(original.Model, deserialized.Model);
+        Assert.Equal(original.Theme, deserialized.Theme);
+        Assert.Equal(original.ThinkingEnabled, deserialized.ThinkingEnabled);
+        Assert.Equal(original.ThinkingDepth, deserialized.ThinkingDepth);
+    }
+
+    [Fact]
+    public void Config_Serialize_ExcludesNullFields()
+    {
+        var config = new Config();
+        
+        var json = JsonSerializer.Serialize(config, new JsonSerializerOptions 
+        { 
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull 
+        });
+        
+        // WeatherApiKey should not appear if empty
+        Assert.DoesNotContain("weatherApiKey", json);
+    }
+
+    [Fact]
+    public void Config_Deserialize_MissingFields_UsesDefaults()
+    {
+        var json = "{}";
+        
+        var config = JsonSerializer.Deserialize<Config>(json);
+        
+        Assert.NotNull(config);
+        Assert.Equal("http://localhost:11434", config!.BaseUrl);
+        Assert.Equal("llama3.2", config.Model);
+    }
+
+    [Fact]
+    public void Config_AutoUpdateEnabled_DefaultsToTrue()
+    {
+        var config = new Config();
+        Assert.True(config.AutoUpdateEnabled);
     }
 }

@@ -1,14 +1,17 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:converters="clr-namespace:OllamaAgent.Converters"
+             xmlns:controls="clr-namespace:OllamaAgent.Controls"
              x:Class="OllamaAgent.App"
              RequestedThemeVariant="Default">
     <Application.Styles>
         <FluentTheme />
+        <StyleInclude Source="avares://MarkView.Avalonia/Themes/MarkdownTheme.axaml" />
     </Application.Styles>
     <Application.Resources>
         <converters:BoolToCollapseIconConverter x:Key="CollapseToggleConverter" />
         <converters:MessageTypeToVisibilityConverter x:Key="ToolResultVisibilityConverter" />
         <converters:SessionSelectedConverter x:Key="SessionSelectedConverter" />
+        <controls:LatexConverter x:Key="LatexConverter" />
     </Application.Resources>
 </Application>

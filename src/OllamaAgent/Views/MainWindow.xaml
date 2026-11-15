@@ -5,6 +5,7 @@
         xmlns:vm="clr-namespace:OllamaAgent.ViewModels"
         xmlns:models="clr-namespace:OllamaAgent.Models"
         xmlns:controls="clr-namespace:OllamaAgent.Controls"
+        xmlns:mv="using:MarkView.Avalonia"
         mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
         x:Class="OllamaAgent.Views.MainWindow"
         Title="ИИ Чат — Ollama"
@@ -266,21 +267,20 @@
                                                 Padding="0"
                                                 Background="Transparent"
                                                 BorderThickness="0"
-                                                Tag="{Binding}"
+                                                DataContext="{Binding}"
                                                 ToolTip.Tip="Копировать текст"
                                                 Margin="5,0,0,0" />
                                     </Grid>
                                     
                                     <!-- Collapsed preview -->
-                                    <TextBlock Text="{Binding PreviewText}" 
-                                               TextWrapping="Wrap"
+                                    <mv:MarkdownViewer Markdown="{Binding PreviewText, Converter={StaticResource LatexConverter}}" 
                                                IsVisible="{Binding IsCollapsed}"
-                                               FontSize="13"
-                                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+                                               Margin="0,4,0,0" />
                                     
                                     <!-- Expanded content -->
-                                    <controls:MarkdownTextBlock Text="{Binding Content}" 
-                                                                IsVisible="{Binding !IsCollapsed}" />
+                                    <mv:MarkdownViewer Markdown="{Binding Content, Converter={StaticResource LatexConverter}}"
+                                                       IsVisible="{Binding !IsCollapsed}"
+                                                       Margin="0,4,0,0" />
                                 </StackPanel>
                             </Panel>
                         </Border>

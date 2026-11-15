@@ -3,8 +3,21 @@ param(
     [string]$Configuration = "Debug",
     
     [switch]$NoRestore,
-    [switch]$Help
+    [switch]$Help,
+    [switch]$SkipTests
 )
+
+$ErrorActionPreference = "Stop"
+
+# Read version from project file
+$projectFile = "src\OllamaAgent\OllamaAgent.csproj"
+$version = "1.0.0"
+if (Test-Path $projectFile) {
+    $content = Get-Content $projectFile -Raw
+    if ($content -match 'Version>(\d+\.\d+\.\d+)') {
+        $version = $Matches[1]
+    }
+}
 
 $ErrorActionPreference = "Stop"
 
@@ -33,13 +46,14 @@ function Write-Error-Exit($message) {
 
 if ($Help) {
     Write-Host ""
-    Write-Host "Build script for OllamaAgent" -ForegroundColor $ColorCyan
+    Write-Host "Build script for OllamaAgent v$version" -ForegroundColor $ColorCyan
     Write-Host ""
     Write-Host "Usage: .\build.ps1 [options]" -ForegroundColor $ColorYellow
     Write-Host ""
     Write-Host "Options:" -ForegroundColor $ColorCyan
     Write-Host "  -Configuration   Build configuration: Debug (default) or Release"
     Write-Host "  -NoRestore       Skip NuGet restore"
+    Write-Host "  -SkipTests       Skip running tests"
     Write-Host "  -Help            Show this help message"
     Write-Host ""
     exit 0
@@ -81,12 +95,17 @@ Write-Success "Build succeeded."
 Write-Host ""
 
 # Run tests
-Write-Log "Running tests..."
-dotnet test --configuration $Configuration --no-build --verbosity normal
-if ($LASTEXITCODE -ne 0) {
-    Write-Warn "Some tests failed. Build succeeded but tests did not pass."
+if (-not $SkipTests) {
+    Write-Log "Running tests..."
+    dotnet test --configuration $Configuration --no-build --verbosity normal
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warn "Some tests failed. Build succeeded but tests did not pass."
+    }
+    Write-Host ""
+} else {
+    Write-Log "Skipping tests (-SkipTests flag)"
+    Write-Host ""
 }
-Write-Host ""
 
 # Publish for installer (Release mode)
 if ($Configuration -eq "Release") {
@@ -115,6 +134,6 @@ if ($Configuration -eq "Release") {
 
 # Summary
 Write-Log "========================================" -ForegroundColor $ColorCyan
-Write-Success "Build completed successfully!"
+Write-Success "Build completed successfully! (v$version)"
 Write-Log "========================================" -ForegroundColor $ColorCyan
 Write-Host ""
