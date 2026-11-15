@@ -48,6 +48,9 @@ public partial class App : Application
 
             desktop.MainWindow = mainWindow;
 
+            // Initialize async components (MCP tools, etc.)
+            _ = _viewModel.InitializeAsync();
+            
             // Load models asynchronously on startup
             _ = _viewModel.LoadModelsAsync();
 

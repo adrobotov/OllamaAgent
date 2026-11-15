@@ -227,7 +227,7 @@ public partial class ChatViewModel : ObservableObject
         ThinkingEnabled = config.ThinkingEnabled;
         SelectedThinkingDepth = config.ThinkingDepth;
         
-        RegisterTools();
+        RegisterSyncTools();
         
         // Set initial model
         if (!string.IsNullOrEmpty(config.Model))
@@ -329,7 +329,7 @@ public partial class ChatViewModel : ObservableObject
         }
     }
 
-    private void RegisterTools()
+    private async Task RegisterToolsAsync()
     {
         // Filesystem tools
         FilesystemTools.Register(_toolExecutor, _rootDir);
@@ -340,25 +340,96 @@ public partial class ChatViewModel : ObservableObject
         // Git tools
         GitTools.Register(_toolExecutor);
 
-        // Weather tool via MCP (only if API key is configured)
-        if (!string.IsNullOrEmpty(_config.WeatherApiKey))
-        {
-            var initialized = McpWeatherTool.InitializeAsync(_config.WeatherApiKey).Result;
-            if (initialized)
-            {
-                McpWeatherTool.Register(_toolExecutor);
-                Console.WriteLine("🌤️ MCP weather tool initialized");
-            }
-        }
-
         // Web tools (always available)
         _webClient = new WebClient();
         WebTools.Register(_toolExecutor, _webClient);
 
+        // Weather tool via MCP (only if API key is configured)
+        if (!string.IsNullOrEmpty(_config.WeatherApiKey))
+        {
+            var weatherApiKey = _config.WeatherApiKey;
+            try
+            {
+                var initialized = await McpWeatherTool.InitializeAsync(weatherApiKey);
+                if (initialized)
+                {
+                    McpWeatherTool.Register(_toolExecutor);
+                    Console.WriteLine("🌤️ MCP weather tool registered successfully");
+                }
+                else
+                {
+                    Console.WriteLine("⚠️ MCP weather tool initialization failed, skipping");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ MCP weather tool init error: {ex.Message}");
+            }
+        }
+
         // Log registered tools
         var tools = _toolExecutor.GetTools();
-        var toolNames = tools.Select(t => t.Function.Name).ToList();
-        Console.WriteLine($"🔧 Registered {toolNames.Count} tools: [{string.Join(", ", toolNames)}]");
+        Console.WriteLine($"📦 Total tools registered: {tools.Count}");
+        foreach (var tool in tools)
+        {
+            Console.WriteLine($"  - {tool.Function.Name}: {tool.Function.Description}");
+        }
+    }
+
+    /// <summary>
+    /// Register only synchronous tools (called from constructor)
+    /// </summary>
+    private void RegisterSyncTools()
+    {
+        // Filesystem tools
+        FilesystemTools.Register(_toolExecutor, _rootDir);
+
+        // Process tools
+        ProcessTools.Register(_toolExecutor);
+
+        // Git tools
+        GitTools.Register(_toolExecutor);
+
+        // Web tools (always available)
+        _webClient = new WebClient();
+        WebTools.Register(_toolExecutor, _webClient);
+    }
+
+    /// <summary>
+    /// Initialize async components (MCP tools, etc.)
+    /// Must be called after construction
+    /// </summary>
+    public async Task InitializeAsync()
+    {
+        // Weather tool via MCP (only if API key is configured)
+        if (!string.IsNullOrEmpty(_config.WeatherApiKey))
+        {
+            try
+            {
+                var initialized = await McpWeatherTool.InitializeAsync(_config.WeatherApiKey);
+                if (initialized)
+                {
+                    McpWeatherTool.Register(_toolExecutor);
+                    Console.WriteLine("🌤️ MCP weather tool registered successfully");
+                }
+                else
+                {
+                    Console.WriteLine("⚠️ MCP weather tool initialization failed, skipping");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ MCP weather tool init error: {ex.Message}");
+            }
+        }
+
+        // Log all registered tools
+        var tools = _toolExecutor.GetTools();
+        Console.WriteLine($"📦 Total tools registered: {tools.Count}");
+        foreach (var tool in tools)
+        {
+            Console.WriteLine($"  - {tool.Function.Name}: {tool.Function.Description}");
+        }
     }
 
     /// <summary>
@@ -880,7 +951,7 @@ public partial class ChatViewModel : ObservableObject
                 
                 // Re-register tools
                 _toolExecutor = new ToolExecutor();
-                RegisterTools();
+        RegisterSyncTools();
             }
         }
         catch (Exception ex)
