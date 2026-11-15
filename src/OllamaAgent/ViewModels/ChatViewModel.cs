@@ -165,7 +165,7 @@ public partial class ChatViewModel : ObservableObject
     /// <summary>
     /// Grouped sessions by date category
     /// </summary>
-    public (string Category, IEnumerable<ChatSession> Sessions)[] GroupedSessions
+    public SessionGroup[] GroupedSessions
     {
         get
         {
@@ -181,13 +181,28 @@ public partial class ChatViewModel : ObservableObject
             var weekSessions = filtered.Where(s => s.UpdatedAt >= weekStart && s.UpdatedAt.Date < today).ToList();
             var olderSessions = filtered.Where(s => s.UpdatedAt < weekStart).ToList();
 
-            var groups = new List<(string, IEnumerable<ChatSession>)>();
-            if (todaySessions.Count > 0) groups.Add(("Сегодня", todaySessions));
-            if (yesterdaySessions.Count > 0) groups.Add(("Вчера", yesterdaySessions));
-            if (weekSessions.Count > 0) groups.Add(("На этой неделе", weekSessions));
-            if (olderSessions.Count > 0) groups.Add(("Ранее", olderSessions));
+            var groups = new List<SessionGroup>();
+            if (todaySessions.Count > 0) groups.Add(new SessionGroup("Сегодня", todaySessions));
+            if (yesterdaySessions.Count > 0) groups.Add(new SessionGroup("Вчера", yesterdaySessions));
+            if (weekSessions.Count > 0) groups.Add(new SessionGroup("На этой неделе", weekSessions));
+            if (olderSessions.Count > 0) groups.Add(new SessionGroup("Ранее", olderSessions));
 
             return groups.ToArray();
+        }
+    }
+
+    /// <summary>
+    /// Session group for date-based grouping
+    /// </summary>
+    public class SessionGroup
+    {
+        public string Category { get; }
+        public IEnumerable<ChatSession> Sessions { get; }
+
+        public SessionGroup(string category, IEnumerable<ChatSession> sessions)
+        {
+            Category = category;
+            Sessions = sessions;
         }
     }
 
@@ -406,6 +421,65 @@ public partial class ChatViewModel : ObservableObject
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Weather tool init error: {ex.Message}");
+            }
+        }
+
+        // Memory MCP (always available)
+        try
+        {
+            var memInit = await McpMemoryTool.InitializeAsync();
+            if (memInit)
+            {
+                McpMemoryTool.Register(_toolExecutor);
+                Console.WriteLine("🧠 Memory MCP registered successfully");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Memory MCP init error: {ex.Message}");
+        }
+
+        // Brave Search MCP (only if API key is configured)
+        if (!string.IsNullOrEmpty(_config.BraveSearchApiKey))
+        {
+            try
+            {
+                var searchInit = await McpSearchTool.InitializeAsync(_config.BraveSearchApiKey);
+                if (searchInit)
+                {
+                    McpSearchTool.Register(_toolExecutor);
+                    Console.WriteLine("🔍 Brave Search MCP registered successfully");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Brave Search MCP init error: {ex.Message}");
+            }
+        }
+
+        // Database MCP (if any connection string is configured)
+        var dbConnections = new Dictionary<string, string>();
+        if (!string.IsNullOrEmpty(_config.DbPostgres))
+            dbConnections["DATABASE_URL"] = _config.DbPostgres;
+        if (!string.IsNullOrEmpty(_config.DbMySql))
+            dbConnections["MYSQL_URL"] = _config.DbMySql;
+        if (!string.IsNullOrEmpty(_config.DbSqlite))
+            dbConnections["SQLITE_PATH"] = _config.DbSqlite;
+
+        if (dbConnections.Count > 0)
+        {
+            try
+            {
+                var dbInit = await McpDatabaseTool.InitializeAsync(dbConnections);
+                if (dbInit)
+                {
+                    McpDatabaseTool.Register(_toolExecutor);
+                    Console.WriteLine($"🗄️ Database MCP registered successfully ({dbConnections.Count} DB(s))");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Database MCP init error: {ex.Message}");
             }
         }
 
@@ -1334,6 +1408,9 @@ public partial class ChatViewModel : ObservableObject
         _ollamaClient?.Dispose();
         _webClient?.Dispose();
         McpWeatherTool.Dispose();
+        McpMemoryTool.Dispose();
+        McpSearchTool.Dispose();
+        McpDatabaseTool.Dispose();
     }
 }
 

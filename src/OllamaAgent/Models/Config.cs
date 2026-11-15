@@ -39,6 +39,19 @@ public class Config
     [JsonPropertyName("weather_api_key")]
     public string WeatherApiKey { get; set; } = string.Empty;
 
+    [JsonPropertyName("brave_search_api_key")]
+    public string BraveSearchApiKey { get; set; } = string.Empty;
+
+    // Database connection strings
+    [JsonPropertyName("db_postgres")]
+    public string DbPostgres { get; set; } = string.Empty;
+
+    [JsonPropertyName("db_mysql")]
+    public string DbMySql { get; set; } = string.Empty;
+
+    [JsonPropertyName("db_sqlite")]
+    public string DbSqlite { get; set; } = string.Empty;
+
     // Thinking mode
     [JsonPropertyName("thinking_enabled")]
     public bool ThinkingEnabled { get; set; } = false;
