@@ -28,7 +28,6 @@ public partial class ChatViewModel : ObservableObject
     private Config _config;
     private readonly string _rootDir;
     private WebClient? _webClient;
-    private WeatherClient? _weatherClient;
 
     [ObservableProperty]
     private string _inputText = string.Empty;
@@ -341,11 +340,15 @@ public partial class ChatViewModel : ObservableObject
         // Git tools
         GitTools.Register(_toolExecutor);
 
-        // Weather tools (only if API key is configured)
+        // Weather tool via MCP (only if API key is configured)
         if (!string.IsNullOrEmpty(_config.WeatherApiKey))
         {
-            _weatherClient = new WeatherClient(_config.WeatherApiKey);
-            WeatherTools.Register(_toolExecutor, _weatherClient);
+            var initialized = McpWeatherTool.InitializeAsync(_config.WeatherApiKey).Result;
+            if (initialized)
+            {
+                McpWeatherTool.Register(_toolExecutor);
+                Console.WriteLine("🌤️ MCP weather tool initialized");
+            }
         }
 
         // Web tools (always available)
@@ -1273,7 +1276,7 @@ public partial class ChatViewModel : ObservableObject
         _configSaveTimer?.Dispose();
         _ollamaClient?.Dispose();
         _webClient?.Dispose();
-        _weatherClient?.Dispose();
+        McpWeatherTool.Dispose();
     }
 }
 
