@@ -18,7 +18,6 @@
     <PackageReference Include="MarkView.Avalonia" Version="12.4.1" />
     <PackageReference Include="MarkView.Avalonia.Math" Version="12.4.1" />
     <PackageReference Include="Markdig" Version="1.4.1" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
   <ItemGroup>

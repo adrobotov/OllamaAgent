@@ -42,7 +42,8 @@ public static class ConfigPaths
         {
             if (_sessionsDir == null)
             {
-                _sessionsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "sessions");
+                var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                _sessionsDir = Path.Combine(appData, "OllamaAgent", "sessions");
                 Directory.CreateDirectory(_sessionsDir);
             }
             return _sessionsDir;

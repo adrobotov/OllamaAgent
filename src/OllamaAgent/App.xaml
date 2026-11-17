@@ -10,7 +10,6 @@
     </Application.Styles>
     <Application.Resources>
         <converters:BoolToCollapseIconConverter x:Key="CollapseToggleConverter" />
-        <converters:MessageTypeToVisibilityConverter x:Key="ToolResultVisibilityConverter" />
         <converters:SessionSelectedConverter x:Key="SessionSelectedConverter" />
         <controls:LatexConverter x:Key="LatexConverter" />
     </Application.Resources>
