@@ -108,10 +108,20 @@ public partial class MainWindow : Window
 
     private async void RefreshModels_Click(object? sender, RoutedEventArgs e)
     {
-        var viewModel = DataContext as ChatViewModel;
-        if (viewModel != null)
+        try
         {
-            await viewModel.LoadModelsAsync();
+            var viewModel = DataContext as ChatViewModel;
+            if (viewModel != null)
+            {
+                await viewModel.LoadModelsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                (DataContext as ChatViewModel)?.SetStatus($"❌ Ошибка: {ex.Message}");
+            });
         }
     }
 
@@ -120,34 +130,44 @@ public partial class MainWindow : Window
         var viewModel = DataContext as ChatViewModel;
         if (viewModel == null) return;
 
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel?.StorageProvider != null)
+        try
         {
-            var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            var topLevel = TopLevel.GetTopLevel(this);
+            if (topLevel?.StorageProvider != null)
             {
-                Title = "Сохранить конфигурацию",
-                DefaultExtension = "json",
-                SuggestedFileName = "config.json",
-                FileTypeChoices = new[]
+                var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
                 {
-                    new FilePickerFileType("JSON Files") { Patterns = new[] { "*.json" } },
-                    new FilePickerFileType("All Files") { Patterns = new[] { "*" } }
+                    Title = "Сохранить конфигурацию",
+                    DefaultExtension = "json",
+                    SuggestedFileName = "config.json",
+                    FileTypeChoices = new[]
+                    {
+                        new FilePickerFileType("JSON Files") { Patterns = new[] { "*.json" } },
+                        new FilePickerFileType("All Files") { Patterns = new[] { "*" } }
+                    }
+                });
+                
+                if (file != null)
+                {
+                    var path = file.Path.IsAbsoluteUri 
+                        ? file.Path.LocalPath 
+                        : file.Path.ToString();
+                    viewModel.SaveConfigCommand.Execute(path);
                 }
-            });
-            
-            if (file != null)
+            }
+            else
             {
-                var path = file.Path.IsAbsoluteUri 
-                    ? file.Path.LocalPath 
-                    : file.Path.ToString();
-                viewModel.SaveConfigCommand.Execute(path);
+                // Fallback: save to default location
+                var configPath = GetConfigPath();
+                viewModel.SaveConfigCommand.Execute(configPath);
             }
         }
-        else
+        catch (Exception ex)
         {
-            // Fallback: save to default location
-            var configPath = GetConfigPath();
-            viewModel.SaveConfigCommand.Execute(configPath);
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                viewModel?.SetStatus($"❌ Ошибка сохранения: {ex.Message}");
+            });
         }
     }
 
@@ -156,28 +176,38 @@ public partial class MainWindow : Window
         var viewModel = DataContext as ChatViewModel;
         if (viewModel == null) return;
 
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel?.StorageProvider != null)
+        try
         {
-            var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            var topLevel = TopLevel.GetTopLevel(this);
+            if (topLevel?.StorageProvider != null)
             {
-                Title = "Загрузить конфигурацию",
-                AllowMultiple = false,
-                FileTypeFilter = new[]
+                var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
                 {
-                    new FilePickerFileType("JSON Files") { Patterns = new[] { "*.json" } },
-                    new FilePickerFileType("All Files") { Patterns = new[] { "*" } }
+                    Title = "Загрузить конфигурацию",
+                    AllowMultiple = false,
+                    FileTypeFilter = new[]
+                    {
+                        new FilePickerFileType("JSON Files") { Patterns = new[] { "*.json" } },
+                        new FilePickerFileType("All Files") { Patterns = new[] { "*" } }
+                    }
+                });
+                
+                if (files.Count > 0)
+                {
+                    var file = files[0];
+                    var path = file.Path.IsAbsoluteUri 
+                        ? file.Path.LocalPath 
+                        : file.Path.ToString();
+                    viewModel.LoadConfigCommand.Execute(path);
                 }
-            });
-            
-            if (files.Count > 0)
-            {
-                var file = files[0];
-                var path = file.Path.IsAbsoluteUri 
-                    ? file.Path.LocalPath 
-                    : file.Path.ToString();
-                viewModel.LoadConfigCommand.Execute(path);
             }
+        }
+        catch (Exception ex)
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                viewModel?.SetStatus($"❌ Ошибка загрузки: {ex.Message}");
+            });
         }
     }
 
@@ -188,7 +218,7 @@ public partial class MainWindow : Window
         var viewModel = DataContext as ChatViewModel;
         if (viewModel != null)
         {
-            viewModel.ToggleThemeCommand.Execute(null);
+            viewModel.ToggleTheme();
             
             // Update icon based on current theme
             UpdateThemeIcon(viewModel);
@@ -341,27 +371,37 @@ public partial class MainWindow : Window
         var viewModel = DataContext as ChatViewModel;
         if (viewModel == null) return;
 
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel?.StorageProvider != null)
+        try
         {
-            var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            var topLevel = TopLevel.GetTopLevel(this);
+            if (topLevel?.StorageProvider != null)
             {
-                Title = "Выберите изображения",
-                AllowMultiple = true,
-                FileTypeFilter = new[]
+                var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
                 {
-                    new FilePickerFileType("Images") { Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp" } },
-                    new FilePickerFileType("All Files") { Patterns = new[] { "*" } }
+                    Title = "Выберите изображения",
+                    AllowMultiple = true,
+                    FileTypeFilter = new[]
+                    {
+                        new FilePickerFileType("Images") { Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.webp" } },
+                        new FilePickerFileType("All Files") { Patterns = new[] { "*" } }
+                    }
+                });
+                
+                if (files.Count > 0)
+                {
+                    var filePaths = files.Select(f => f.Path.IsAbsoluteUri 
+                        ? f.Path.LocalPath 
+                        : f.Path.ToString()).ToList();
+                    await viewModel.AttachImagesAsync(filePaths);
                 }
-            });
-            
-            if (files.Count > 0)
-            {
-                var filePaths = files.Select(f => f.Path.IsAbsoluteUri 
-                    ? f.Path.LocalPath 
-                    : f.Path.ToString()).ToList();
-                await viewModel.AttachImagesAsync(filePaths);
             }
+        }
+        catch (Exception ex)
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                viewModel?.SetStatus($"❌ Ошибка выбора файла: {ex.Message}");
+            });
         }
     }
 
@@ -477,29 +517,39 @@ public partial class MainWindow : Window
         var viewModel = DataContext as ChatViewModel;
         if (viewModel == null) return;
 
-        var json = viewModel.ExportSessionToJson();
-        if (string.IsNullOrEmpty(json)) return;
-
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel?.StorageProvider != null)
+        try
         {
-            var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            var json = viewModel.ExportSessionToJson();
+            if (string.IsNullOrEmpty(json)) return;
+
+            var topLevel = TopLevel.GetTopLevel(this);
+            if (topLevel?.StorageProvider != null)
             {
-                Title = "Экспорт чата",
-                DefaultExtension = "json",
-                SuggestedFileName = "chat.json",
-                FileTypeChoices = new[]
+                var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
                 {
-                    new FilePickerFileType("JSON Files") { Patterns = new[] { "*.json" } },
-                    new FilePickerFileType("All Files") { Patterns = new[] { "*" } }
+                    Title = "Экспорт чата",
+                    DefaultExtension = "json",
+                    SuggestedFileName = "chat.json",
+                    FileTypeChoices = new[]
+                    {
+                        new FilePickerFileType("JSON Files") { Patterns = new[] { "*.json" } },
+                        new FilePickerFileType("All Files") { Patterns = new[] { "*" } }
+                    }
+                });
+                
+                if (file != null)
+                {
+                    File.WriteAllText(file.Path.LocalPath, json);
+                    viewModel.SetStatus($"✅ Экспортировано: {file.Path.LocalPath}");
                 }
-            });
-            
-            if (file != null)
-            {
-                File.WriteAllText(file.Path.LocalPath, json);
-                viewModel.SetStatus($"✅ Экспортировано: {file.Path.LocalPath}");
             }
+        }
+        catch (Exception ex)
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                viewModel?.SetStatus($"❌ Ошибка экспорта: {ex.Message}");
+            });
         }
     }
 
@@ -508,29 +558,39 @@ public partial class MainWindow : Window
         var viewModel = DataContext as ChatViewModel;
         if (viewModel == null) return;
 
-        var markdown = viewModel.ExportSessionToMarkdown();
-        if (string.IsNullOrEmpty(markdown)) return;
-
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel?.StorageProvider != null)
+        try
         {
-            var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            var markdown = viewModel.ExportSessionToMarkdown();
+            if (string.IsNullOrEmpty(markdown)) return;
+
+            var topLevel = TopLevel.GetTopLevel(this);
+            if (topLevel?.StorageProvider != null)
             {
-                Title = "Экспорт чата",
-                DefaultExtension = "md",
-                SuggestedFileName = "chat.md",
-                FileTypeChoices = new[]
+                var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
                 {
-                    new FilePickerFileType("Markdown Files") { Patterns = new[] { "*.md" } },
-                    new FilePickerFileType("All Files") { Patterns = new[] { "*" } }
+                    Title = "Экспорт чата",
+                    DefaultExtension = "md",
+                    SuggestedFileName = "chat.md",
+                    FileTypeChoices = new[]
+                    {
+                        new FilePickerFileType("Markdown Files") { Patterns = new[] { "*.md" } },
+                        new FilePickerFileType("All Files") { Patterns = new[] { "*" } }
+                    }
+                });
+                
+                if (file != null)
+                {
+                    File.WriteAllText(file.Path.LocalPath, markdown);
+                    viewModel.SetStatus($"✅ Экспортировано в Markdown: {file.Path.LocalPath}");
                 }
-            });
-            
-            if (file != null)
-            {
-                File.WriteAllText(file.Path.LocalPath, markdown);
-                viewModel.SetStatus($"✅ Экспортировано в Markdown: {file.Path.LocalPath}");
             }
+        }
+        catch (Exception ex)
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                viewModel?.SetStatus($"❌ Ошибка экспорта: {ex.Message}");
+            });
         }
     }
 
@@ -539,40 +599,53 @@ public partial class MainWindow : Window
         var viewModel = DataContext as ChatViewModel;
         if (viewModel == null) return;
 
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel?.StorageProvider != null)
+        try
         {
-            var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            var topLevel = TopLevel.GetTopLevel(this);
+            if (topLevel?.StorageProvider != null)
             {
-                Title = "Импорт чатов",
-                AllowMultiple = true,
-                FileTypeFilter = new[]
+                var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
                 {
-                    new FilePickerFileType("JSON Files") { Patterns = new[] { "*.json" } },
-                    new FilePickerFileType("All Files") { Patterns = new[] { "*" } }
-                }
-            });
-            
-            if (files.Count > 0)
-            {
-                int imported = 0;
-                foreach (var file in files)
-                {
-                    try
+                    Title = "Импорт чатов",
+                    AllowMultiple = true,
+                    FileTypeFilter = new[]
                     {
-                        var json = File.ReadAllText(file.Path.LocalPath);
-                        imported += viewModel.ImportSessionsFromJson(json);
+                        new FilePickerFileType("JSON Files") { Patterns = new[] { "*.json" } },
+                        new FilePickerFileType("All Files") { Patterns = new[] { "*" } }
                     }
-                    catch
-                    {
-                        // Skip invalid files
-                    }
-                }
-                if (imported == 0)
+                });
+                
+                if (files.Count > 0)
                 {
-                    viewModel.SetStatus("⚠️ Не удалось импортировать сессии");
+                    int imported = 0;
+                    foreach (var file in files)
+                    {
+                        try
+                        {
+                            var json = File.ReadAllText(file.Path.LocalPath);
+                            imported += viewModel.ImportSessionsFromJson(json);
+                        }
+                        catch (Exception ex)
+                        {
+                            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                            {
+                                viewModel?.SetStatus($"⚠️ Пропущен файл {file.Path.LocalPath}: {ex.Message}");
+                            });
+                        }
+                    }
+                    if (imported == 0)
+                    {
+                        viewModel.SetStatus("⚠️ Не удалось импортировать сессии");
+                    }
                 }
             }
+        }
+        catch (Exception ex)
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                viewModel?.SetStatus($"❌ Ошибка импорта: {ex.Message}");
+            });
         }
     }
 }

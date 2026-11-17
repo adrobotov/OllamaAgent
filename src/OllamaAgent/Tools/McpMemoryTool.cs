@@ -35,10 +35,10 @@ public static class McpMemoryTool
             );
 
             var tools = await mcpClient.ListToolsAsync();
-            Console.WriteLine($"🧠 Memory MCP tools available: {tools.Count}");
+            AppLogger.Logger.Log($"🧠 Memory MCP tools available: {tools.Count}");
             foreach (var tool in tools)
             {
-                Console.WriteLine($"  - {tool.Name}: {tool.Description}");
+                AppLogger.Logger.Log($"  - {tool.Name}: {tool.Description}");
             }
 
             lock (_lock)
@@ -46,12 +46,12 @@ public static class McpMemoryTool
                 _mcpClient = mcpClient;
             }
 
-            Console.WriteLine("🧠 Memory MCP initialized successfully");
+            AppLogger.Logger.Log("🧠 Memory MCP initialized successfully");
             return true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"⚠️ Memory MCP unavailable: {ex.Message}");
+            AppLogger.Logger.LogWarning($"⚠️ Memory MCP unavailable: {ex.Message}");
             return false;
         }
     }

@@ -40,10 +40,10 @@ public static class McpWeatherTool
             );
 
             var tools = await mcpClient.ListToolsAsync();
-            Console.WriteLine($"🔧 MCP tools available: {tools.Count}");
+            AppLogger.Logger.Log($"🔧 MCP tools available: {tools.Count}");
             foreach (var tool in tools)
             {
-                Console.WriteLine($"  - {tool.Name}: {tool.Description}");
+                AppLogger.Logger.Log($"  - {tool.Name}: {tool.Description}");
             }
 
             lock (_lock)
@@ -51,15 +51,15 @@ public static class McpWeatherTool
                 _mcpClient = mcpClient;
             }
 
-            Console.WriteLine("🌤️ Weather tool using MCP server");
+            AppLogger.Logger.Log("🌤️ Weather tool using MCP server");
             return;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"⚠️ MCP weather server unavailable ({ex.GetType().Name}), using direct HTTP fallback");
+            AppLogger.Logger.LogWarning($"⚠️ MCP weather server unavailable ({ex.GetType().Name}), using direct HTTP fallback");
         }
 
-        Console.WriteLine("🌤️ Weather tool using direct HTTP (weatherapi.com)");
+        AppLogger.Logger.Log("🌤️ Weather tool using direct HTTP (weatherapi.com)");
     }
 
     /// <summary>
@@ -143,7 +143,7 @@ public static class McpWeatherTool
                         }
                         catch
                         {
-                            Console.WriteLine("🔄 MCP call failed, falling back to direct HTTP");
+                            AppLogger.Logger.Log("🔄 MCP call failed, falling back to direct HTTP");
                         }
                     }
 

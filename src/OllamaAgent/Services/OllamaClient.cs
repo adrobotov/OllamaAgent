@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using OllamaAgent.Models;
+using OllamaAgent.Tools;
 
 namespace OllamaAgent.Services;
 
@@ -70,14 +71,14 @@ public class OllamaClient : IDisposable
             WriteIndented = true,
             DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
         });
-        Console.WriteLine($"[OllamaRequest] {json}");
+        AppLogger.Logger.Log($"[OllamaRequest] {json}");
         var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
         var response = await _httpClient.PostAsync($"{_baseUrl}/api/chat", content, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            Console.WriteLine($"[OllamaError] {response.StatusCode}: {errorBody}");
+            AppLogger.Logger.LogError($"[OllamaError] {response.StatusCode}: {errorBody}");
             throw new HttpRequestException($"Ollama API error: {response.StatusCode} - {errorBody}");
         }
 
@@ -96,14 +97,14 @@ public class OllamaClient : IDisposable
             WriteIndented = true,
             DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
         });
-        Console.WriteLine($"[OllamaRequest] {json}");
+        AppLogger.Logger.Log($"[OllamaRequest] {json}");
         var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
         var response = await _httpClient.PostAsync($"{_baseUrl}/api/chat", content, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            Console.WriteLine($"[OllamaError] {response.StatusCode}: {errorBody}");
+            AppLogger.Logger.LogError($"[OllamaError] {response.StatusCode}: {errorBody}");
             throw new HttpRequestException($"Ollama API error: {response.StatusCode} - {errorBody}");
         }
 

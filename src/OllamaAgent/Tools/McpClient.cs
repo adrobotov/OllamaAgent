@@ -196,7 +196,7 @@ public class McpClient : IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"MCP read error: {ex.Message}");
+            AppLogger.Logger.LogWarning($"MCP read error: {ex.Message}");
         }
     }
 

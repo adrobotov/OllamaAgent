@@ -41,10 +41,10 @@ public static class McpFilesystemTool
             );
 
             var tools = await mcpClient.ListToolsAsync();
-            Console.WriteLine($"📁 Filesystem MCP tools available: {tools.Count}");
+            AppLogger.Logger.Log($"📁 Filesystem MCP tools available: {tools.Count}");
             foreach (var tool in tools)
             {
-                Console.WriteLine($"  - {tool.Name}: {tool.Description}");
+                AppLogger.Logger.Log($"  - {tool.Name}: {tool.Description}");
             }
 
             lock (_lock)
@@ -52,12 +52,12 @@ public static class McpFilesystemTool
                 _mcpClient = mcpClient;
             }
 
-            Console.WriteLine("📁 Filesystem MCP initialized successfully");
+            AppLogger.Logger.Log("📁 Filesystem MCP initialized successfully");
             return true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"⚠️ Filesystem MCP unavailable: {ex.Message}");
+            AppLogger.Logger.LogWarning($"⚠️ Filesystem MCP unavailable: {ex.Message}");
             return false;
         }
     }
